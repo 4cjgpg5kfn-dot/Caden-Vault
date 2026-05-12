@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<meta name="apple-mobile-web-app-title" content="Caden's Vault"/>
+<meta name="theme-color" content="#010409"/>
+<title>Caden's Vault</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#010409;color:#e6edf3;font-family:'Courier New',monospace;min-height:100dvh;color-scheme:dark;-webkit-tap-highlight-color:transparent}
+#app{max-width:480px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px max(80px,calc(16px + env(safe-area-inset-bottom)))}
+h1{font-size:20px;font-weight:700;letter-spacing:-0.5px;color:#e6edf3;margin-bottom:4px}
+.badges{display:flex;gap:8px;margin-bottom:24px}
+.badge{background:#0d1117;border:1px solid #21262d;border-radius:4px;padding:2px 7px;font-size:10px;color:#8b949e;letter-spacing:0.5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.grid1{margin-bottom:8px}
+.card{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:12px 14px;margin-bottom:0}
+.card-pad{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:16px;margin-bottom:16px}
+.lbl{font-size:9px;color:#484f58;letter-spacing:1px;margin-bottom:6px}
+.val{font-size:22px;font-weight:700;letter-spacing:-0.5px;line-height:1;color:#e6edf3}
+.val.sm{font-size:16px}
+.val.g{color:#3fb950}
+.val.r{color:#f85149}
+.sub{font-size:10px;color:#8b949e;margin-top:4px}
+.chart-wrap{position:relative;height:170px}
+canvas{background:transparent!important}
+.form-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.ff{flex:1 1 110px}
+.fl{font-size:9px;color:#8b949e;letter-spacing:0.5px;margin-bottom:6px}
+input{width:100%;background:#161b22;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:10px 12px;font-family:inherit;font-size:14px;outline:none;-webkit-appearance:none;color-scheme:dark}
+input:focus{border-color:#3fb950}
+.btn{background:#238636;border:1px solid #2ea043;border-radius:8px;color:#fff;padding:10px 18px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;letter-spacing:0.5px;flex-shrink:0;-webkit-appearance:none}
+.btn:active{opacity:0.8}
+.err{color:#f85149;font-size:11px;margin-top:8px;min-height:16px}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{border-bottom:1px solid #21262d}
+th{padding:8px 10px;text-align:left;color:#484f58;font-size:9px;letter-spacing:1px;font-weight:500;white-space:nowrap}
+td{padding:10px 10px;white-space:nowrap;color:#e6edf3}
+tbody tr{border-bottom:1px solid #161b22}
+.del{background:none;border:none;color:#484f58;font-size:18px;cursor:pointer;padding:0;line-height:1}
+.footer{text-align:center;color:#30363d;font-size:10px;margin-top:24px;letter-spacing:0.5px}
+#toast{position:fixed;bottom:max(24px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 18px;font-size:12px;color:#e6edf3;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:999;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>CADEN'S VAULT 📈</h1>
+  <div class="badges"><span class="badge">MES / MNQ</span><span class="badge">NY AM SESSION</span></div>
+
+  <div class="grid1"><div class="card"><div class="lbl">CURRENT BALANCE</div><div class="val" id="k-bal">—</div></div></div>
+  <div class="grid2" style="margin-bottom:16px">
+    <div class="card"><div class="lbl">NET P&L</div><div class="val sm" id="k-pnl">—</div></div>
+    <div class="card"><div class="lbl">TOTAL ROI</div><div class="val sm" id="k-roi">—</div></div>
+    <div class="card"><div class="lbl">AVG DAILY P&L</div><div class="val sm" id="k-avg">—</div></div>
+    <div class="card"><div class="lbl">DAYS ACTIVE</div><div class="val sm" id="k-days">—</div></div>
+    <div class="card"><div class="lbl">MAX DRAWDOWN</div><div class="val sm" id="k-dd">—</div></div>
+    <div class="card"><div class="lbl">WIN RATE</div><div class="val sm" id="k-wr">—</div></div>
+    <div class="card"><div class="lbl">BEST SESSION</div><div class="val sm g" id="k-best">—</div><div class="sub" id="k-best-d"></div></div>
+    <div class="card"><div class="lbl">WORST SESSION</div><div class="val sm r" id="k-worst">—</div><div class="sub" id="k-worst-d"></div></div>
+  </div>
+
+  <div class="card-pad">
+    <div class="lbl">ACCOUNT EQUITY</div>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+  </div>
+
+  <div class="card-pad">
+    <div class="lbl">LOG ENTRY</div>
+    <div class="form-row">
+      <div class="ff"><div class="fl">DATE</div><input type="date" id="inp-date"/></div>
+      <div class="ff"><div class="fl">BALANCE (USD)</div><input type="number" id="inp-bal" placeholder="e.g. 6250.00" step="0.01"/></div>
+      <button class="btn" onclick="addEntry()">+ LOG</button>
+    </div>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div class="card-pad">
+    <div class="lbl" id="tbl-lbl">ENTRY LOG</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>DATE</th><th>BALANCE</th><th>DAILY P&L</th><th>ROI</th><th></th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="footer">DATA SAVED LOCALLY · BASE $5,000 · APR 15 2026</div>
+</div>
+<div id="toast"></div>
+
+<script>
+const BASE=5000,LOCK="2026-04-15",KEY="cv_v2";
+const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const SEED=[
+  {date:"2026-04-15",balance:5000},
+  {date:"2026-04-16",balance:4936.10},
+  {date:"2026-04-17",balance:4792.00},
+  {date:"2026-04-20",balance:4676.20},
+  {date:"2026-04-21",balance:4813.70},
+  {date:"2026-04-22",balance:4729.90},
+  {date:"2026-04-23",balance:4708.50},
+  {date:"2026-04-24",balance:4820.90},
+  {date:"2026-04-27",balance:4982.00},
+  {date:"2026-04-28",balance:4751.80},
+  {date:"2026-04-29",balance:5195.95},
+  {date:"2026-04-30",balance:4898.80},
+  {date:"2026-05-01",balance:4731.90},
+  {date:"2026-05-04",balance:4254.10},
+  {date:"2026-05-05",balance:4645.00},
+  {date:"2026-05-06",balance:5581.15},
+  {date:"2026-05-07",balance:5953.35},
+  {date:"2026-05-08",balance:5700.00},
+  {date:"2026-05-11",balance:5763.95},
+  {date:"2026-05-12",balance:6010.75}
+];
+
+let entries=[];
+let chart=null;
+
+function fmt(n,d=2){return n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d})}
+function fd(s){const[,m,d]=s.split("-");return MO[parseInt(m)-1]+" "+parseInt(d)}
+function days(a,b){return Math.round((new Date(b)-new Date(a))/86400000)}
+function sign(n){return n>=0?"+":""}
+function gc(n){return n>=0?"g":"r"}
+
+function load(){
+  try{const r=localStorage.getItem(KEY);entries=r?JSON.parse(r):[...SEED];if(!r)save();}
+  catch(e){entries=[...SEED];}
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(entries));}catch(e){}}
+function sorted(){return[...entries].sort((a,b)=>a.date.localeCompare(b.date))}
+
+function metrics(rows){
+  if(rows.length<2)return null;
+  const f=rows[0],l=rows[rows.length-1];
+  const d=days(f.date,l.date)||1;
+  const net=l.balance-BASE,roi=(net/BASE)*100,avg=net/d;
+  let peak=rows[0].balance,dd=0;
+  for(const r of rows){if(r.balance>peak)peak=r.balance;const x=((peak-r.balance)/peak)*100;if(x>dd)dd=x;}
+  let best=null,worst=null,w=0,lo=0;
+  for(let i=1;i<rows.length;i++){
+    const ch=rows[i].balance-rows[i-1].balance;
+    if(!best||ch>best.c)best={d:rows[i].date,c:ch};
+    if(!worst||ch<worst.c)worst={d:rows[i].date,c:ch};
+    if(ch>0)w++;else if(ch<0)lo++;
+  }
+  return{net,roi,d,avg,dd,best,worst,w,lo,l};
+}
+
+function el(id){return document.getElementById(id)}
+function setKPI(id,txt,cls){const e=el(id);e.textContent=txt;e.className="val sm"+(cls?" "+cls:"");}
+
+function renderKPIs(m){
+  if(!m)return;
+  el("k-bal").textContent="$"+fmt(m.l.balance);
+  setKPI("k-pnl",sign(m.net)+"$"+fmt(m.net),gc(m.net));
+  setKPI("k-roi",sign(m.roi)+fmt(m.roi)+"%",gc(m.roi));
+  setKPI("k-avg",sign(m.avg)+"$"+fmt(m.avg),gc(m.avg));
+  el("k-days").textContent=m.d+"d";
+  el("k-dd").textContent="-"+fmt(m.dd)+"%";
+  el("k-dd").className="val sm"+(m.dd>5?" r":"");
+  const wr=m.w+m.lo>0?fmt((m.w/(m.w+m.lo))*100,0)+"%":"—";
+  el("k-wr").textContent=wr;
+  if(m.best){el("k-best").textContent="+$"+fmt(m.best.c);el("k-best-d").textContent=fd(m.best.d);}
+  if(m.worst){el("k-worst").textContent=sign(m.worst.c)+"$"+fmt(m.worst.c);el("k-worst-d").textContent=fd(m.worst.d);}
+}
+
+function renderChart(rows){
+  const labels=rows.map(r=>fd(r.date));
+  const data=rows.map(r=>r.balance);
+  const last=data[data.length-1]||BASE;
+  const col=last>=BASE?"#3fb950":"#f85149";
+  if(chart){chart.destroy();chart=null;}
+  const ctx=el("chart").getContext("2d");
+  const g=ctx.createLinearGradient(0,0,0,170);
+  g.addColorStop(0,col+"44");g.addColorStop(1,col+"00");
+  chart=new Chart(ctx,{
+    type:"line",
+    data:{labels,datasets:[{data,borderColor:col,borderWidth:2,backgroundColor:g,fill:true,tension:0.3,pointBackgroundColor:col,pointRadius:3,pointHoverRadius:5}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{backgroundColor:"#0d1117",borderColor:"#30363d",borderWidth:1,titleColor:"#8b949e",bodyColor:"#e6edf3",titleFont:{family:"monospace",size:11},bodyFont:{family:"monospace",size:12},
+          callbacks:{label:c=>"$"+fmt(c.raw)+" ("+sign(c.raw-BASE)+"$"+fmt(c.raw-BASE)+")"}}
+      },
+      scales:{
+        x:{ticks:{color:"#484f58",font:{family:"monospace",size:9},maxRotation:45},grid:{display:false},border:{display:false}},
+        y:{ticks:{color:"#484f58",font:{family:"monospace",size:9},callback:v=>"$"+(v/1000).toFixed(1)+"k"},grid:{color:"#161b22"},border:{display:false}}
+      },
+      animation:{duration:400}
+    },
+    plugins:[{id:"bl",afterDraw(c){const{ctx:cx,scales:{y,x}}=c;const yp=y.getPixelForValue(BASE);cx.save();cx.setLineDash([4,4]);cx.strokeStyle="#30363d";cx.lineWidth=1;cx.beginPath();cx.moveTo(x.left,yp);cx.lineTo(x.right,yp);cx.stroke();cx.restore();}}]
+  });
+}
+
+function renderTable(rows){
+  el("tbl-lbl").textContent="ENTRY LOG — "+rows.length+" RECORDS";
+  const tb=el("tbody");tb.innerHTML="";
+  rows.forEach((e,i)=>{
+    const prev=i>0?rows[i-1].balance:e.balance;
+    const daily=e.balance-prev;
+    const roi=((e.balance-BASE)/BASE)*100;
+    const isS=e.date===LOCK;
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td style="color:#8b949e">${fd(e.date)}${isS?' <span style="font-size:9px;background:#21262d;color:#484f58;padding:1px 4px;border-radius:3px">START</span>':""}</td>
+      <td style="font-weight:600">$${fmt(e.balance)}</td>
+      <td style="color:${i===0?"#484f58":daily>=0?"#3fb950":"#f85149"}">${i===0?"—":sign(daily)+"$"+fmt(daily)}</td>
+      <td style="color:${roi>=0?"#3fb950":"#f85149"}">${sign(roi)}${fmt(roi)}%</td>
+      <td style="text-align:center">${!isS?`<button class="del" onclick="del('${e.date}')">×</button>`:""}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function render(){const r=sorted();renderKPIs(metrics(r));renderChart(r);renderTable(r);}
+
+function addEntry(){
+  const date=el("inp-date").value,bal=parseFloat(el("inp-bal").value),err=el("err");
+  err.textContent="";
+  if(!date)return(err.textContent="Please select a date.");
+  if(isNaN(bal)||bal<=0)return(err.textContent="Enter a valid balance.");
+  if(entries.find(e=>e.date===date))return(err.textContent="Entry for this date already exists.");
+  entries.push({date,balance:bal});save();el("inp-bal").value="";render();toast("Entry logged ✓");
+}
+
+function del(date){
+  if(date===LOCK)return;
+  entries=entries.filter(e=>e.date!==date);save();render();toast("Entry removed");
+}
+
+function toast(msg){
+  const t=el("toast");t.textContent=msg;t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2000);
+}
+
+el("inp-date").value=new Date().toISOString().split("T")[0];
+el("inp-bal").addEventListener("keydown",e=>{if(e.key==="Enter")addEntry();});
+load();render();
+</script>
+
+</body>
+</html>
