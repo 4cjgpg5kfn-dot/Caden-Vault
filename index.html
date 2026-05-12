@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<meta name="apple-mobile-web-app-title" content="Caden's Vault"/>
+<meta name="theme-color" content="#010409"/>
+<title>Caden's Vault</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#010409;color:#e6edf3;font-family:'Courier New',monospace;min-height:100dvh;color-scheme:dark;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+
+/* Layout */
+#app{max-width:480px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px max(80px,calc(60px + env(safe-area-inset-bottom)))}
+
+/* Tab bar */
+#tabbar{position:fixed;bottom:0;left:0;right:0;background:#0d1117;border-top:1px solid #21262d;display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0;cursor:pointer;gap:3px;border:none;background:none;color:#484f58;font-family:inherit;font-size:9px;letter-spacing:0.5px;transition:color .15s}
+.tab.active{color:#3fb950}
+.tab svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* Typography */
+.page-title{font-size:20px;font-weight:700;letter-spacing:-0.5px;color:#e6edf3;margin-bottom:4px}
+.badges{display:flex;gap:8px;margin-bottom:20px}
+.badge{background:#0d1117;border:1px solid #21262d;border-radius:4px;padding:2px 7px;font-size:10px;color:#8b949e;letter-spacing:0.5px}
+
+/* Cards */
+.card{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:12px 14px}
+.card-pad{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:16px;margin-bottom:12px}
+.lbl{font-size:9px;color:#484f58;letter-spacing:1px;margin-bottom:6px}
+.val{font-size:22px;font-weight:700;letter-spacing:-0.5px;line-height:1;color:#e6edf3}
+.val.sm{font-size:16px}.val.xs{font-size:13px}
+.val.g{color:#3fb950}.val.r{color:#f85149}
+.sub{font-size:10px;color:#8b949e;margin-top:4px}
+
+/* Grids */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.g1{margin-bottom:8px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px}
+
+/* Chart */
+.chart-wrap{position:relative;height:170px}
+.chart-sm{position:relative;height:100px}
+canvas{background:transparent!important}
+
+/* Period pills */
+.pills{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.pills::-webkit-scrollbar{display:none}
+.pill{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:11px;font-family:inherit;cursor:pointer;border:1px solid #21262d;background:#0d1117;color:#8b949e;letter-spacing:0.5px;transition:all .15s}
+.pill.active{background:#238636;border-color:#2ea043;color:#fff}
+
+/* Period summary card */
+.period-card{background:#0d1117;border:1px solid #21262d;border-radius:12px;padding:16px;margin-bottom:12px}
+.period-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.period-name{font-size:11px;color:#8b949e;letter-spacing:0.5px}
+.period-pnl{font-size:26px;font-weight:700;letter-spacing:-0.5px}
+.period-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+.stat-box{background:#161b22;border-radius:8px;padding:10px}
+.stat-label{font-size:8px;color:#484f58;letter-spacing:1px;margin-bottom:4px}
+.stat-value{font-size:13px;font-weight:700;color:#e6edf3}
+
+/* Breakdown rows */
+.breakdown-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #161b22}
+.breakdown-row:last-child{border-bottom:none}
+.br-left{font-size:12px;color:#8b949e}
+.br-right{font-size:13px;font-weight:600}
+.br-meta{font-size:10px;color:#484f58;margin-top:2px}
+
+/* Log form */
+.form-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.ff{flex:1 1 110px}
+.fl{font-size:9px;color:#8b949e;letter-spacing:0.5px;margin-bottom:6px}
+input{width:100%;background:#161b22;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:10px 12px;font-family:inherit;font-size:14px;outline:none;-webkit-appearance:none;color-scheme:dark}
+input:focus{border-color:#3fb950}
+.btn{background:#238636;border:1px solid #2ea043;border-radius:8px;color:#fff;padding:10px 18px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;letter-spacing:0.5px;flex-shrink:0;-webkit-appearance:none}
+.btn:active{opacity:.8}
+.err{color:#f85149;font-size:11px;margin-top:8px;min-height:16px}
+
+/* Table */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{border-bottom:1px solid #21262d}
+th{padding:8px 10px;text-align:left;color:#484f58;font-size:9px;letter-spacing:1px;font-weight:500;white-space:nowrap}
+td{padding:10px 10px;white-space:nowrap;color:#e6edf3}
+tbody tr{border-bottom:1px solid #161b22}
+.del{background:none;border:none;color:#484f58;font-size:18px;cursor:pointer;padding:0;line-height:1}
+
+/* Divider */
+.section-title{font-size:9px;color:#484f58;letter-spacing:1.5px;margin-bottom:10px;margin-top:4px}
+
+/* Toast */
+#toast{position:fixed;bottom:max(80px,calc(65px + env(safe-area-inset-bottom)));left:50%;transform:translateX(-50%) translateY(20px);background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 18px;font-size:12px;color:#e6edf3;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:999;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.footer{text-align:center;color:#30363d;font-size:10px;margin-top:20px;letter-spacing:0.5px}
+.hidden{display:none}
+</style>
+
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ DASHBOARD TAB ═══ -->
+
+  <div id="tab-dashboard">
+    <div class="page-title">CADEN'S VAULT 📈</div>
+    <div class="badges"><span class="badge">MES / MNQ</span><span class="badge">NY AM SESSION</span></div>
+    <div class="g1"><div class="card"><div class="lbl">CURRENT BALANCE</div><div class="val" id="k-bal">—</div></div></div>
+    <div class="g2">
+      <div class="card"><div class="lbl">NET P&L</div><div class="val sm" id="k-pnl">—</div></div>
+      <div class="card"><div class="lbl">TOTAL ROI</div><div class="val sm" id="k-roi">—</div></div>
+      <div class="card"><div class="lbl">AVG DAILY P&L</div><div class="val sm" id="k-avg">—</div></div>
+      <div class="card"><div class="lbl">DAYS ACTIVE</div><div class="val sm" id="k-days">—</div></div>
+      <div class="card"><div class="lbl">MAX DRAWDOWN</div><div class="val sm" id="k-dd">—</div></div>
+      <div class="card"><div class="lbl">WIN RATE</div><div class="val sm" id="k-wr">—</div></div>
+      <div class="card"><div class="lbl">BEST SESSION</div><div class="val sm g" id="k-best">—</div><div class="sub" id="k-best-d"></div></div>
+      <div class="card"><div class="lbl">WORST SESSION</div><div class="val sm r" id="k-worst">—</div><div class="sub" id="k-worst-d"></div></div>
+    </div>
+    <div style="margin-bottom:12px"></div>
+    <div class="card-pad">
+      <div class="lbl">ACCOUNT EQUITY</div>
+      <div class="chart-wrap"><canvas id="chart-main"></canvas></div>
+    </div>
+    <div class="footer">DATA SAVED LOCALLY · BASE $5,000</div>
+  </div>
+
+  <!-- ═══ ANALYTICS TAB ═══ -->
+
+  <div id="tab-analytics" class="hidden">
+    <div class="page-title" style="margin-bottom:16px">ANALYTICS</div>
+    <div class="pills" id="period-pills">
+      <button class="pill active" onclick="setPeriod('week')">Weekly</button>
+      <button class="pill" onclick="setPeriod('month')">Monthly</button>
+      <button class="pill" onclick="setPeriod('quarter')">Quarterly</button>
+      <button class="pill" onclick="setPeriod('year')">Yearly</button>
+      <button class="pill" onclick="setPeriod('alltime')">All Time</button>
+    </div>
+    <div id="analytics-content"></div>
+  </div>
+
+  <!-- ═══ LOG TAB ═══ -->
+
+  <div id="tab-log" class="hidden">
+    <div class="page-title" style="margin-bottom:16px">LOG ENTRY</div>
+    <div class="card-pad">
+      <div class="form-row">
+        <div class="ff"><div class="fl">DATE</div><input type="date" id="inp-date"/></div>
+        <div class="ff"><div class="fl">BALANCE (USD)</div><input type="number" id="inp-bal" placeholder="e.g. 6250.00" step="0.01"/></div>
+        <button class="btn" onclick="addEntry()">+ LOG</button>
+      </div>
+      <div class="err" id="err"></div>
+    </div>
+    <div class="section-title" style="margin-top:8px">BACKUP</div>
+    <div class="card-pad" style="margin-bottom:12px">
+      <div style="font-size:11px;color:#8b949e;margin-bottom:12px;line-height:1.6">Export saves all entries as a file. Import restores from a backup. Do this before clearing Safari data or switching phones.</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" style="flex:1;background:#161b22;border-color:#30363d;color:#e6edf3" onclick="exportData()">&#11015; EXPORT</button>
+        <button class="btn" style="flex:1;background:#161b22;border-color:#30363d;color:#e6edf3" onclick="el('import-modal').style.display='flex'">&#11014; IMPORT</button>
+      </div>
+      <div style="font-size:10px;color:#484f58;margin-top:10px;text-align:center" id="backup-info"></div>
+    </div>
+    <div class="section-title">ENTRY HISTORY</div>
+    <div class="card-pad" style="padding:8px 0">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th style="padding-left:14px">DATE</th><th>BALANCE</th><th>DAILY P&L</th><th>ROI</th><th></th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="footer">DATA SAVED LOCALLY · BASE $5,000</div>
+  </div>
+
+</div>
+
+<!-- Import Modal -->
+
+<div id="import-modal" style="display:none;position:fixed;inset:0;background:#000000cc;z-index:200;align-items:center;justify-content:center;padding:24px">
+  <div style="background:#0d1117;border:1px solid #30363d;border-radius:14px;padding:20px;width:100%;max-width:420px">
+    <div style="font-size:13px;font-weight:700;color:#e6edf3;margin-bottom:6px">IMPORT BACKUP</div>
+    <div style="font-size:11px;color:#8b949e;margin-bottom:14px;line-height:1.6">Paste the contents of your exported backup file. This will replace all current entries.</div>
+    <textarea id="import-text" placeholder="Paste backup JSON here..." style="width:100%;height:120px;background:#161b22;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:10px 12px;font-family:inherit;font-size:12px;outline:none;resize:none;color-scheme:dark"></textarea>
+    <div class="err" id="import-err" style="margin-bottom:8px"></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn" style="flex:1;background:#161b22;border-color:#30363d;color:#8b949e" onclick="el('import-modal').style.display='none';el('import-text').value='';el('import-err').textContent=''">CANCEL</button>
+      <button class="btn" style="flex:1" onclick="importData()">RESTORE</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tab Bar -->
+
+<div id="tabbar">
+  <button class="tab active" onclick="setTab('dashboard')" id="tb-dashboard">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    DASHBOARD
+  </button>
+  <button class="tab" onclick="setTab('analytics')" id="tb-analytics">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    ANALYTICS
+  </button>
+  <button class="tab" onclick="setTab('log')" id="tb-log">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    LOG
+  </button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────
+const BASE=5000, LOCK="2026-04-15", KEY="cv_v3";
+const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const QTR=["Q1","Q2","Q3","Q4"];
+const SEED=[
+  {date:"2026-04-15",balance:5000},{date:"2026-04-16",balance:4936.10},
+  {date:"2026-04-17",balance:4792.00},{date:"2026-04-20",balance:4676.20},
+  {date:"2026-04-21",balance:4813.70},{date:"2026-04-22",balance:4729.90},
+  {date:"2026-04-23",balance:4708.50},{date:"2026-04-24",balance:4820.90},
+  {date:"2026-04-27",balance:4982.00},{date:"2026-04-28",balance:4751.80},
+  {date:"2026-04-29",balance:5195.95},{date:"2026-04-30",balance:4898.80},
+  {date:"2026-05-01",balance:4731.90},{date:"2026-05-04",balance:4254.10},
+  {date:"2026-05-05",balance:4645.00},{date:"2026-05-06",balance:5581.15},
+  {date:"2026-05-07",balance:5953.35},{date:"2026-05-08",balance:5700.00},
+  {date:"2026-05-11",balance:5763.95},{date:"2026-05-12",balance:6010.75}
+];
+
+let entries=[], chartMain=null, currentPeriod="week";
+
+// ── Utils ─────────────────────────────────────────────────
+function fmt(n,d=2){return n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d})}
+function fd(s){const[,m,d]=s.split("-");return MO[parseInt(m)-1]+" "+parseInt(d)}
+function fdFull(s){const[y,m,d]=s.split("-");return MO[parseInt(m)-1]+" "+parseInt(d)+", "+y}
+function days(a,b){return Math.round((new Date(b)-new Date(a))/86400000)}
+function sign(n){return n>=0?"+":""}
+function gc(n){return n>=0?"#3fb950":"#f85149"}
+function gcClass(n){return n>=0?"g":"r"}
+function el(id){return document.getElementById(id)}
+function sorted(){return[...entries].sort((a,b)=>a.date.localeCompare(b.date))}
+
+// ── Storage ───────────────────────────────────────────────
+function load(){try{const r=localStorage.getItem(KEY);entries=r?JSON.parse(r):[...SEED];if(!r)save();}catch(e){entries=[...SEED];}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(entries));}catch(e){}}
+
+// ── Metrics ───────────────────────────────────────────────
+function calcMetrics(rows, startBal){
+  if(rows.length<1)return null;
+  const sb=startBal!==undefined?startBal:rows[0].balance;
+  const first=rows[0], last=rows[rows.length-1];
+  const net=last.balance-sb;
+  const roi=(net/sb)*100;
+  const d=rows.length>1?days(first.date,last.date):1;
+  const avg=d>0?net/d:0;
+  let peak=sb, dd=0;
+  for(const r of rows){if(r.balance>peak)peak=r.balance;const x=((peak-r.balance)/peak)*100;if(x>dd)dd=x;}
+  let best=null,worst=null,w=0,lo=0;
+  for(let i=1;i<rows.length;i++){
+    const ch=rows[i].balance-rows[i-1].balance;
+    if(!best||ch>best.c)best={d:rows[i].date,c:ch};
+    if(!worst||ch<worst.c)worst={d:rows[i].date,c:ch};
+    if(ch>0)w++;else if(ch<0)lo++;
+  }
+  const wr=w+lo>0?((w/(w+lo))*100):null;
+  return{net,roi,d,avg,dd,best,worst,w,lo,wr,first,last,sb};
+}
+
+// ── Grouping ──────────────────────────────────────────────
+function getWeekKey(date){
+  const d=new Date(date+"T00:00:00");
+  const day=d.getDay();
+  const diff=d.getDate()-(day===0?6:day-1);
+  const mon=new Date(d);mon.setDate(diff);
+  const y=mon.getFullYear();
+  const m=String(mon.getMonth()+1).padStart(2,"0");
+  const dd=String(mon.getDate()).padStart(2,"0");
+  return y+"-"+m+"-"+dd;
+}
+function getMonthKey(date){return date.slice(0,7)}
+function getQuarterKey(date){const[y,m]=date.split("-");const q=Math.ceil(parseInt(m)/3);return y+"-Q"+q}
+function getYearKey(date){return date.slice(0,4)}
+
+function groupBy(rows, keyFn){
+  const groups={};
+  rows.forEach(r=>{const k=keyFn(r.date);if(!groups[k])groups[k]=[];groups[k].push(r);});
+  return groups;
+}
+
+function groupLabel(key, type){
+  if(type==="week"){
+    const[ky,km,kd]=key.split("-").map(Number);
+    const d=new Date(ky,km-1,kd);
+    const end=new Date(ky,km-1,kd+4);
+    return MO[d.getMonth()]+" "+d.getDate()+" – "+MO[end.getMonth()]+" "+end.getDate();
+  }
+  if(type==="month"){const[y,m]=key.split("-");return MO[parseInt(m)-1]+" "+y;}
+  if(type==="quarter"){const[y,q]=key.split("-");return q+" "+y;}
+  if(type==="year")return key;
+  return "All Time";
+}
+
+// ── Tab Navigation ────────────────────────────────────────
+function setTab(name){
+  ["dashboard","analytics","log"].forEach(t=>{
+    el("tab-"+t).classList.toggle("hidden",t!==name);
+    el("tb-"+t).classList.toggle("active",t===name);
+  });
+  if(name==="analytics")renderAnalytics();
+}
+
+// ── Dashboard Render ──────────────────────────────────────
+function renderDashboard(){
+  const rows=sorted();
+  const m=calcMetrics(rows,BASE);
+  if(!m)return;
+  el("k-bal").textContent="$"+fmt(m.last.balance);
+  const setPnl=(id,v)=>{const e=el(id);e.textContent=sign(v)+(v<0?"-":"")+"$"+fmt(Math.abs(v));e.className="val sm "+gcClass(v);};
+  setPnl("k-pnl",m.net);
+  el("k-roi").textContent=sign(m.roi)+fmt(m.roi)+"%";
+  el("k-roi").className="val sm "+gcClass(m.roi);
+  el("k-avg").textContent=sign(m.avg)+"$"+fmt(Math.abs(m.avg));
+  el("k-avg").className="val sm "+gcClass(m.avg);
+  el("k-days").textContent=m.d+"d";
+  el("k-dd").textContent="-"+fmt(m.dd)+"%";
+  el("k-dd").className="val sm"+(m.dd>5?" r":"");
+  el("k-wr").textContent=m.wr!==null?fmt(m.wr,0)+"%":"—";
+  if(m.best){el("k-best").textContent="+$"+fmt(m.best.c);el("k-best-d").textContent=fd(m.best.d);}
+  if(m.worst){el("k-worst").textContent=sign(m.worst.c)+"$"+fmt(Math.abs(m.worst.c));el("k-worst-d").textContent=fd(m.worst.d);}
+  renderMainChart(rows);
+}
+
+function renderMainChart(rows){
+  const labels=rows.map(r=>fd(r.date));
+  const data=rows.map(r=>r.balance);
+  const col=data[data.length-1]>=BASE?"#3fb950":"#f85149";
+  if(chartMain){chartMain.destroy();chartMain=null;}
+  const ctx=el("chart-main").getContext("2d");
+  const g=ctx.createLinearGradient(0,0,0,170);
+  g.addColorStop(0,col+"44");g.addColorStop(1,col+"00");
+  chartMain=new Chart(ctx,{
+    type:"line",data:{labels,datasets:[{data,borderColor:col,borderWidth:2,backgroundColor:g,fill:true,tension:0.3,pointBackgroundColor:col,pointRadius:3,pointHoverRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#0d1117",borderColor:"#30363d",borderWidth:1,titleColor:"#8b949e",bodyColor:"#e6edf3",callbacks:{label:c=>"$"+fmt(c.raw)+" ("+sign(c.raw-BASE)+"$"+fmt(Math.abs(c.raw-BASE))+")"}}},
+    scales:{x:{ticks:{color:"#484f58",font:{family:"monospace",size:9},maxRotation:45},grid:{display:false},border:{display:false}},y:{ticks:{color:"#484f58",font:{family:"monospace",size:9},callback:v=>"$"+(v/1000).toFixed(1)+"k"},grid:{color:"#161b22"},border:{display:false}}},animation:{duration:400}},
+    plugins:[{id:"bl",afterDraw(c){const{ctx:cx,scales:{y,x}}=c;const yp=y.getPixelForValue(BASE);cx.save();cx.setLineDash([4,4]);cx.strokeStyle="#30363d";cx.lineWidth=1;cx.beginPath();cx.moveTo(x.left,yp);cx.lineTo(x.right,yp);cx.stroke();cx.restore();}}]
+  });
+}
+
+// ── Analytics Render ──────────────────────────────────────
+function setPeriod(p){
+  currentPeriod=p;
+  el("period-pills").querySelectorAll(".pill").forEach(b=>b.classList.toggle("active",b.textContent.toLowerCase().startsWith(p==="alltime"?"all":p==="quarter"?"q":p)));
+  renderAnalytics();
+}
+
+function renderAnalytics(){
+  const rows=sorted().filter(r=>r.date!==LOCK);
+  const container=el("analytics-content");
+  container.innerHTML="";
+
+  if(currentPeriod==="alltime"){
+    const allRows=[{date:LOCK,balance:BASE},...rows];
+    const m=calcMetrics(allRows,BASE);
+    if(!m){container.innerHTML='<div style="color:#484f58;font-size:12px;text-align:center;padding:40px">No data yet</div>';return;}
+    container.innerHTML=buildSummaryCard("All Time",fdFull(LOCK)+" → "+fdFull(m.last.date),m,allRows)+
+      buildBreakdownSection("Monthly Breakdown",buildMonthlyBreakdown(allRows));
+    return;
+  }
+
+  const keyFn={week:getWeekKey,month:getMonthKey,quarter:getQuarterKey,year:getYearKey}[currentPeriod];
+  const allRows=[{date:LOCK,balance:BASE},...rows];
+  const groups=groupBy(allRows,keyFn);
+  const keys=Object.keys(groups).sort();
+
+  if(keys.length===0){container.innerHTML='<div style="color:#484f58;font-size:12px;text-align:center;padding:40px">No data yet</div>';return;}
+
+  let html="";
+  keys.reverse().forEach(key=>{
+    const grpRows=groups[key];
+    const grpSorted=[...grpRows].sort((a,b)=>a.date.localeCompare(b.date));
+    const prevKey=keys[keys.indexOf(key)+1];
+    let startBal=BASE;
+    if(prevKey){
+      const prevRows=groups[prevKey].sort((a,b)=>a.date.localeCompare(b.date));
+      startBal=prevRows[prevRows.length-1].balance;
+    }
+    const m=calcMetrics(grpSorted,startBal);
+    if(!m)return;
+    html+=buildPeriodCard(groupLabel(key,currentPeriod),m,grpSorted);
+  });
+  container.innerHTML=html||'<div style="color:#484f58;font-size:12px;text-align:center;padding:40px">No data</div>';
+}
+
+function buildSummaryCard(title,subtitle,m,rows){
+  const col=gc(m.net);
+  const chartId="chart-at-"+Date.now();
+  setTimeout(()=>renderMiniChart(chartId,rows),50);
+  return`<div class="period-card">
+    <div class="period-header">
+      <div><div class="period-name">${title}</div><div style="font-size:10px;color:#484f58;margin-top:2px">${subtitle}</div></div>
+      <div class="period-pnl" style="color:${col}">${sign(m.net)}$${fmt(Math.abs(m.net))}</div>
+    </div>
+    <div class="period-stats">
+      <div class="stat-box"><div class="stat-label">ROI</div><div class="stat-value" style="color:${col}">${sign(m.roi)}${fmt(m.roi)}%</div></div>
+      <div class="stat-box"><div class="stat-label">WIN RATE</div><div class="stat-value">${m.wr!==null?fmt(m.wr,0)+"%":"—"}</div></div>
+      <div class="stat-box"><div class="stat-label">TRADES DAYS</div><div class="stat-value">${m.w+m.lo}</div></div>
+      <div class="stat-box"><div class="stat-label">AVG DAILY</div><div class="stat-value" style="color:${gc(m.avg)}">${sign(m.avg)}$${fmt(Math.abs(m.avg))}</div></div>
+      <div class="stat-box"><div class="stat-label">MAX DD</div><div class="stat-value" style="color:${m.dd>5?"#f85149":"#e6edf3"}">-${fmt(m.dd)}%</div></div>
+      <div class="stat-box"><div class="stat-label">BEST DAY</div><div class="stat-value" style="color:#3fb950">${m.best?"+$"+fmt(m.best.c):"—"}</div></div>
+    </div>
+    <div style="height:100px"><canvas id="${chartId}"></canvas></div>
+  </div>`;
+}
+
+function buildPeriodCard(label,m,rows){
+  const col=gc(m.net);
+  const chartId="chart-"+label.replace(/\s/g,"")+Date.now();
+  setTimeout(()=>renderMiniChart(chartId,rows),50);
+  return`<div class="period-card">
+    <div class="period-header">
+      <div><div class="period-name" style="font-size:13px;font-weight:700;color:#e6edf3">${fd(rows[0].date)} – ${fd(rows[rows.length-1].date)}</div></div>
+      <div><div class="period-pnl" style="color:${col};font-size:20px">${sign(m.net)}$${fmt(Math.abs(m.net))}</div>
+      <div style="font-size:10px;color:${col};text-align:right;margin-top:2px">${sign(m.roi)}${fmt(m.roi)}%</div></div>
+    </div>
+    <div class="period-stats">
+      <div class="stat-box"><div class="stat-label">WIN RATE</div><div class="stat-value">${m.wr!==null?fmt(m.wr,0)+"%":"—"}</div></div>
+      <div class="stat-box"><div class="stat-label">TRADE DAYS</div><div class="stat-value">${m.w+m.lo}</div></div>
+      <div class="stat-box"><div class="stat-label">AVG DAILY</div><div class="stat-value" style="color:${gc(m.avg)}">${sign(m.avg)}$${fmt(Math.abs(m.avg))}</div></div>
+      <div class="stat-box"><div class="stat-label">MAX DD</div><div class="stat-value" style="color:${m.dd>5?"#f85149":"#e6edf3"}">-${fmt(m.dd)}%</div></div>
+      <div class="stat-box"><div class="stat-label">BEST DAY</div><div class="stat-value" style="color:#3fb950">${m.best?"+$"+fmt(m.best.c):"—"}</div></div>
+      <div class="stat-box"><div class="stat-label">WORST DAY</div><div class="stat-value" style="color:#f85149">${m.worst?sign(m.worst.c)+"$"+fmt(Math.abs(m.worst.c)):"—"}</div></div>
+    </div>
+    <div style="height:80px"><canvas id="${chartId}"></canvas></div>
+  </div>`;
+}
+
+function buildMonthlyBreakdown(rows){
+  const groups=groupBy(rows,getMonthKey);
+  const keys=Object.keys(groups).sort().reverse();
+  return keys.map(k=>{
+    const gr=[...groups[k]].sort((a,b)=>a.date.localeCompare(b.date));
+    const prevKey=keys[keys.indexOf(k)+1];
+    let sb=BASE;
+    if(prevKey){const pr=groups[prevKey].sort((a,b)=>a.date.localeCompare(b.date));sb=pr[pr.length-1].balance;}
+    const m=calcMetrics(gr,sb);if(!m)return"";
+    return`<div class="breakdown-row">
+      <div><div class="br-left">${groupLabel(k,"month")}</div><div class="br-meta">${m.w+m.lo} days · ${m.wr!==null?fmt(m.wr,0)+"% win":""}</div></div>
+      <div style="text-align:right"><div class="br-right" style="color:${gc(m.net)}">${sign(m.net)}$${fmt(Math.abs(m.net))}</div>
+      <div class="br-meta" style="color:${gc(m.roi)}">${sign(m.roi)}${fmt(m.roi)}%</div></div>
+    </div>`;
+  }).join("");
+}
+
+function buildBreakdownSection(title,content){
+  return`<div class="card-pad"><div class="lbl">${title}</div>${content}</div>`;
+}
+
+function renderMiniChart(id,rows){
+  const cvs=el(id);if(!cvs)return;
+  const labels=rows.map(r=>fd(r.date));
+  const data=rows.map(r=>r.balance);
+  const col=data[data.length-1]>=(data[0]?.balance||BASE)?"#3fb950":"#f85149";
+  const ctx=cvs.getContext("2d");
+  const g=ctx.createLinearGradient(0,0,0,80);
+  g.addColorStop(0,col+"33");g.addColorStop(1,col+"00");
+  new Chart(ctx,{
+    type:"line",data:{labels,datasets:[{data,borderColor:col,borderWidth:1.5,backgroundColor:g,fill:true,tension:0.4,pointRadius:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},
+    scales:{x:{display:false},y:{display:false}},animation:{duration:300}}
+  });
+}
+
+// ── Log Tab ───────────────────────────────────────────────
+function renderTable(){
+  const rows=sorted();
+  el("tbody").innerHTML="";
+  rows.forEach((e,i)=>{
+    const prev=i>0?rows[i-1].balance:e.balance;
+    const daily=e.balance-prev;
+    const roi=((e.balance-BASE)/BASE)*100;
+    const isS=e.date===LOCK;
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td style="color:#8b949e;padding-left:14px">${fd(e.date)}${isS?' <span style="font-size:9px;background:#21262d;color:#484f58;padding:1px 4px;border-radius:3px">START</span>':""}</td>
+      <td style="font-weight:600">$${fmt(e.balance)}</td>
+      <td style="color:${i===0?"#484f58":gc(daily)}">${i===0?"—":sign(daily)+"$"+fmt(Math.abs(daily))}</td>
+      <td style="color:${gc(roi)}">${sign(roi)}${fmt(roi)}%</td>
+      <td style="text-align:center;padding-right:10px">${!isS?`<button class="del" onclick="del('${e.date}')">×</button>`:""}</td>`;
+    el("tbody").appendChild(tr);
+  });
+}
+
+function addEntry(){
+  const date=el("inp-date").value,bal=parseFloat(el("inp-bal").value),err=el("err");
+  err.textContent="";
+  if(!date)return(err.textContent="Please select a date.");
+  if(isNaN(bal)||bal<=0)return(err.textContent="Enter a valid balance.");
+  if(entries.find(e=>e.date===date))return(err.textContent="Entry already exists for this date.");
+  entries.push({date,balance:bal});save();renderDashboard();renderTable();el("inp-bal").value="";
+  toast("Entry logged ✓");
+}
+
+function del(date){
+  if(date===LOCK)return;
+  entries=entries.filter(e=>e.date!==date);save();renderDashboard();renderTable();toast("Entry removed");
+}
+
+function exportData(){
+  const data=JSON.stringify(entries,null,2);
+  const date=new Date().toISOString().split("T")[0];
+  const filename="cadenvault-backup-"+date+".json";
+  try{
+    const blob=new Blob([data],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+    document.body.removeChild(a);URL.revokeObjectURL(url);
+    toast("Backup exported ✓");
+  }catch(e){
+    navigator.clipboard.writeText(data).then(()=>toast("Copied to clipboard ✓")).catch(()=>prompt("Copy this backup:",data));
+  }
+  const info=el("backup-info");
+  if(info)info.textContent="Last export: "+new Date().toLocaleString();
+}
+
+function importData(){
+  const text=el("import-text").value.trim();
+  const err=el("import-err");
+  err.textContent="";
+  if(!text)return(err.textContent="Please paste your backup first.");
+  try{
+    const parsed=JSON.parse(text);
+    if(!Array.isArray(parsed))throw new Error();
+    if(!parsed.every(e=>e.date&&typeof e.balance==="number"))throw new Error();
+    entries=parsed;save();renderDashboard();renderTable();
+    el("import-modal").style.display="none";
+    el("import-text").value="";
+    toast("Restored "+parsed.length+" entries ✓");
+  }catch(e){
+    err.textContent="Invalid backup. Make sure you pasted the full exported file.";
+  }
+}
+
+function toast(msg){
+  const t=el("toast");t.textContent=msg;t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2000);
+}
+
+// ── Init ──────────────────────────────────────────────────
+el("inp-date").value=new Date().toISOString().split("T")[0];
+el("inp-bal").addEventListener("keydown",e=>{if(e.key==="Enter")addEntry();});
+load();
+renderDashboard();
+renderTable();
+</script>
+
+</body>
+</html>
