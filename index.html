@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-title" content="Caden's Vault" />
+  <meta name="theme-color" content="#010409" />
+  <title>Caden's Vault</title>
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23010409'/%3E%3Ctext y='.9em' font-size='80' x='10'%3E📈%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+```
+:root {
+  --bg: #010409;
+  --surface: #0d1117;
+  --border: #21262d;
+  --border2: #30363d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --dim: #484f58;
+  --green: #3fb950;
+  --red: #f85149;
+  --hover: #161b22;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  min-height: 100dvh;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Layout ── */
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: calc(16px + var(--safe-top)) 16px calc(80px + var(--safe-bottom));
+}
+
+/* ── Header ── */
+.header { margin-bottom: 24px; }
+.header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+.header-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.badge {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+
+/* ── KPI Grid ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.kpi-wide { grid-column: span 2; }
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.kpi-label {
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.kpi-value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+.kpi-value.small { font-size: 16px; }
+.kpi-value.green { color: var(--green); }
+.kpi-value.red   { color: var(--red);   }
+.kpi-value.white { color: var(--text);  }
+
+/* ── Chart ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.card-label {
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 1px;
+  margin-bottom: 14px;
+}
+.chart-wrap { position: relative; height: 170px; }
+
+/* ── Best / Worst ── */
+.bw-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* ── Log Form ── */
+.form-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.form-field { flex: 1 1 110px; }
+.form-label {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+input[type="date"], input[type="number"] {
+  width: 100%;
+  background: var(--hover);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+input[type="date"]:focus, input[type="number"]:focus {
+  border-color: var(--green);
+}
+.btn-log {
+  background: #238636;
+  border: 1px solid #2ea043;
+  border-radius: 8px;
+  color: #fff;
+  padding: 10px 18px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  -webkit-appearance: none;
+}
+.btn-log:active { opacity: 0.8; }
+.error-msg {
+  color: var(--red);
+  font-size: 11px;
+  margin-top: 8px;
+}
+
+/* ── Entry Table ── */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead tr { border-bottom: 1px solid var(--border); }
+th {
+  padding: 8px 10px;
+  text-align: left;
+  color: var(--dim);
+  font-size: 9px;
+  letter-spacing: 1px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+td { padding: 10px 10px; white-space: nowrap; }
+tbody tr { border-bottom: 1px solid var(--hover); transition: background 0.1s; }
+tbody tr:active { background: var(--hover); }
+.td-date { color: var(--muted); }
+.td-bal  { color: var(--text); font-weight: 600; }
+.td-del  { text-align: center; }
+.del-btn {
+  background: none;
+  border: none;
+  color: var(--dim);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.del-btn:active { color: var(--red); }
+
+/* ── Footer ── */
+.footer {
+  text-align: center;
+  color: var(--border2);
+  font-size: 10px;
+  margin-top: 24px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Toasts ── */
+#toast {
+  position: fixed;
+  bottom: calc(24px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  z-index: 999;
+  white-space: nowrap;
+}
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+```
+
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- Header -->
+  <div class="header">
+    <h1>CADEN'S VAULT 📈</h1>
+    <div class="header-sub">
+      <span class="badge">MES / MNQ</span>
+      <span class="badge">NY AM SESSION</span>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi kpi-wide"><div class="kpi-label">CURRENT BALANCE</div><div class="kpi-value white" id="k-balance">—</div></div>
+    <div class="kpi"><div class="kpi-label">NET P&L</div><div class="kpi-value" id="k-pnl">—</div></div>
+    <div class="kpi"><div class="kpi-label">TOTAL ROI</div><div class="kpi-value" id="k-roi">—</div></div>
+    <div class="kpi"><div class="kpi-label">AVG DAILY P&L</div><div class="kpi-value small" id="k-avgdaily">—</div></div>
+    <div class="kpi"><div class="kpi-label">DAYS ACTIVE</div><div class="kpi-value small white" id="k-days">—</div></div>
+    <div class="kpi"><div class="kpi-label">MAX DRAWDOWN</div><div class="kpi-value small" id="k-dd">—</div></div>
+    <div class="kpi"><div class="kpi-label">WIN RATE</div><div class="kpi-value small white" id="k-wr">—</div></div>
+    <div class="kpi"><div class="kpi-label">DAILY RETURN</div><div class="kpi-value small white" id="k-dr">—</div></div>
+  </div>
+
+  <!-- Chart -->
+
+  <div class="card">
+    <div class="card-label">ACCOUNT EQUITY</div>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+  </div>
+
+  <!-- Best / Worst -->
+
+  <div class="bw-grid">
+    <div class="kpi"><div class="kpi-label">BEST SESSION</div><div class="kpi-value small green" id="k-best">—</div><div id="k-best-date" style="font-size:10px;color:var(--muted);margin-top:4px"></div></div>
+    <div class="kpi"><div class="kpi-label">WORST SESSION</div><div class="kpi-value small red" id="k-worst">—</div><div id="k-worst-date" style="font-size:10px;color:var(--muted);margin-top:4px"></div></div>
+  </div>
+
+  <!-- Log Entry -->
+
+  <div class="card">
+    <div class="card-label">LOG ENTRY</div>
+    <div class="form-row">
+      <div class="form-field">
+        <div class="form-label">DATE</div>
+        <input type="date" id="inp-date" />
+      </div>
+      <div class="form-field">
+        <div class="form-label">BALANCE (USD)</div>
+        <input type="number" id="inp-bal" placeholder="e.g. 6250.00" step="0.01" />
+      </div>
+      <button class="btn-log" onclick="addEntry()">+ LOG</button>
+    </div>
+    <div class="error-msg" id="err-msg"></div>
+  </div>
+
+  <!-- Entry Log -->
+
+  <div class="card">
+    <div class="card-label" id="table-label">ENTRY LOG</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>DATE</th>
+            <th>BALANCE</th>
+            <th>DAILY P&L</th>
+            <th>ROI</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="entry-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">DATA SAVED LOCALLY · BASE $5,000 · APR 15 2026</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────
+const BASE = 5000;
+const LOCK_DATE = "2026-04-15";
+const STORE_KEY = "cadenvault_v1";
+
+const SEED = [
+  { date: "2026-04-15", balance: 5000.00 },
+  { date: "2026-04-16", balance: 4936.10 },
+  { date: "2026-04-17", balance: 4792.00 },
+  { date: "2026-04-20", balance: 4676.20 },
+  { date: "2026-04-21", balance: 4813.70 },
+  { date: "2026-04-22", balance: 4729.90 },
+  { date: "2026-04-23", balance: 4708.50 },
+  { date: "2026-04-24", balance: 4820.90 },
+  { date: "2026-04-27", balance: 4982.00 },
+  { date: "2026-04-28", balance: 4751.80 },
+  { date: "2026-04-29", balance: 5195.95 },
+  { date: "2026-04-30", balance: 4898.80 },
+  { date: "2026-05-01", balance: 4731.90 },
+  { date: "2026-05-04", balance: 4254.10 },
+  { date: "2026-05-05", balance: 4645.00 },
+  { date: "2026-05-06", balance: 5581.15 },
+  { date: "2026-05-07", balance: 5953.35 },
+  { date: "2026-05-08", balance: 5700.00 },
+  { date: "2026-05-11", balance: 5763.95 },
+  { date: "2026-05-12", balance: 6010.75 },
+];
+
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// ── State ──────────────────────────────────────────────────
+let entries = [];
+let chartInstance = null;
+
+// ── Utils ──────────────────────────────────────────────────
+function fmt(n, d = 2) {
+  return n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+function fmtDate(s) {
+  const [,m,d] = s.split("-");
+  return `${MONTHS[parseInt(m)-1]} ${parseInt(d)}`;
+}
+function daysBetween(a, b) {
+  return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+function colorClass(n) { return n >= 0 ? "green" : "red"; }
+function sign(n) { return n >= 0 ? "+" : ""; }
+
+// ── Storage ────────────────────────────────────────────────
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) entries = JSON.parse(raw);
+    else { entries = [...SEED]; save(); }
+  } catch { entries = [...SEED]; }
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(entries)); } catch {}
+}
+
+// ── Sorted entries ─────────────────────────────────────────
+function sorted() {
+  return [...entries].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// ── Metrics ────────────────────────────────────────────────
+function calcMetrics(rows) {
+  if (rows.length < 2) return null;
+  const first = rows[0], last = rows[rows.length - 1];
+  const days = daysBetween(first.date, last.date) || 1;
+  const net = last.balance - BASE;
+  const roi = (net / BASE) * 100;
+  const avgDaily = net / days;
+
+  let peak = rows[0].balance, maxDD = 0;
+  for (const r of rows) {
+    if (r.balance > peak) peak = r.balance;
+    const dd = ((peak - r.balance) / peak) * 100;
+    if (dd > maxDD) maxDD = dd;
+  }
+
+  let best = null, worst = null, wins = 0, losses = 0;
+  for (let i = 1; i < rows.length; i++) {
+    const ch = rows[i].balance - rows[i-1].balance;
+    if (!best || ch > best.change) best = { date: rows[i].date, change: ch };
+    if (!worst || ch < worst.change) worst = { date: rows[i].date, change: ch };
+    if (ch > 0) wins++; else if (ch < 0) losses++;
+  }
+
+  return { net, roi, days, avgDaily, maxDD, best, worst, wins, losses, last };
+}
+
+// ── Render KPIs ────────────────────────────────────────────
+function renderKPIs(m) {
+  if (!m) return;
+  const c = colorClass(m.roi);
+  document.getElementById("k-balance").textContent = `$${fmt(m.last.balance)}`;
+  document.getElementById("k-pnl").textContent = `${sign(m.net)}$${fmt(m.net)}`;
+  document.getElementById("k-pnl").className = `kpi-value ${c}`;
+  document.getElementById("k-roi").textContent = `${sign(m.roi)}${fmt(m.roi)}%`;
+  document.getElementById("k-roi").className = `kpi-value ${c}`;
+  document.getElementById("k-avgdaily").textContent = `${sign(m.avgDaily)}$${fmt(m.avgDaily)}`;
+  document.getElementById("k-avgdaily").className = `kpi-value small ${colorClass(m.avgDaily)}`;
+  document.getElementById("k-days").textContent = `${m.days}d`;
+  document.getElementById("k-dd").textContent = `-${fmt(m.maxDD)}%`;
+  document.getElementById("k-dd").className = `kpi-value small ${m.maxDD > 5 ? "red" : "white"}`;
+  const wr = m.wins + m.losses > 0 ? (m.wins / (m.wins + m.losses)) * 100 : 0;
+  document.getElementById("k-wr").textContent = m.wins + m.losses > 0 ? `${fmt(wr, 0)}%` : "—";
+  document.getElementById("k-dr").textContent = `${fmt(m.roi / m.days, 3)}%/d`;
+  if (m.best) {
+    document.getElementById("k-best").textContent = `+$${fmt(m.best.change)}`;
+    document.getElementById("k-best-date").textContent = fmtDate(m.best.date);
+  }
+  if (m.worst) {
+    document.getElementById("k-worst").textContent = `${sign(m.worst.change)}$${fmt(m.worst.change)}`;
+    document.getElementById("k-worst-date").textContent = fmtDate(m.worst.date);
+  }
+}
+
+// ── Render Chart ───────────────────────────────────────────
+function renderChart(rows) {
+  const labels = rows.map(r => fmtDate(r.date));
+  const data   = rows.map(r => r.balance);
+  const last   = data[data.length - 1] || BASE;
+  const col    = last >= BASE ? "#3fb950" : "#f85149";
+
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+  const ctx = document.getElementById("chart").getContext("2d");
+  const grad = ctx.createLinearGradient(0, 0, 0, 170);
+  grad.addColorStop(0, col + "44");
+  grad.addColorStop(1, col + "00");
+
+  chartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        data,
+        borderColor: col,
+        borderWidth: 2,
+        backgroundColor: grad,
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: col,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#0d1117",
+          borderColor: "#30363d",
+          borderWidth: 1,
+          titleColor: "#8b949e",
+          bodyColor: "#e6edf3",
+          titleFont: { family: "monospace", size: 11 },
+          bodyFont: { family: "monospace", size: 12 },
+          callbacks: {
+            label: ctx => `$${fmt(ctx.raw)} (${sign(ctx.raw - BASE)}$${fmt(ctx.raw - BASE)})`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: "#484f58", font: { family: "monospace", size: 9 }, maxRotation: 45 },
+          grid: { display: false },
+          border: { display: false }
+        },
+        y: {
+          ticks: {
+            color: "#484f58",
+            font: { family: "monospace", size: 9 },
+            callback: v => `$${(v/1000).toFixed(1)}k`
+          },
+          grid: { color: "#161b22" },
+          border: { display: false }
+        }
+      },
+      animation: { duration: 400 }
+    }
+  });
+
+  // Baseline reference line plugin
+  Chart.register({
+    id: "baseline",
+    afterDraw(chart) {
+      const { ctx: c, scales: { y, x } } = chart;
+      const yPos = y.getPixelForValue(BASE);
+      c.save();
+      c.setLineDash([4, 4]);
+      c.strokeStyle = "#30363d";
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(x.left, yPos);
+      c.lineTo(x.right, yPos);
+      c.stroke();
+      c.restore();
+    }
+  });
+}
+
+// ── Render Table ───────────────────────────────────────────
+function renderTable(rows) {
+  document.getElementById("table-label").textContent = `ENTRY LOG — ${rows.length} RECORDS`;
+  const tbody = document.getElementById("entry-tbody");
+  tbody.innerHTML = "";
+  rows.forEach((e, i) => {
+    const prev = i > 0 ? rows[i-1].balance : e.balance;
+    const daily = e.balance - prev;
+    const roi = ((e.balance - BASE) / BASE) * 100;
+    const isStart = e.date === LOCK_DATE;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="td-date">${fmtDate(e.date)}${isStart ? ' <span style="font-size:9px;color:var(--dim);background:var(--border);padding:1px 4px;border-radius:3px">START</span>' : ""}</td>
+      <td class="td-bal">$${fmt(e.balance)}</td>
+      <td style="color:${i===0?"var(--dim)":daily>=0?"var(--green)":"var(--red)"}">${i===0?"—":`${sign(daily)}$${fmt(daily)}`}</td>
+      <td style="color:${roi>=0?"var(--green)":"var(--red)"}">${sign(roi)}${fmt(roi)}%</td>
+      <td class="td-del">${!isStart ? `<button class="del-btn" onclick="deleteEntry('${e.date}')">×</button>` : ""}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Full Render ────────────────────────────────────────────
+function render() {
+  const rows = sorted();
+  const m = calcMetrics(rows);
+  renderKPIs(m);
+  renderChart(rows);
+  renderTable(rows);
+}
+
+// ── Add Entry ──────────────────────────────────────────────
+function addEntry() {
+  const date = document.getElementById("inp-date").value;
+  const bal  = parseFloat(document.getElementById("inp-bal").value);
+  const err  = document.getElementById("err-msg");
+  err.textContent = "";
+
+  if (!date) return (err.textContent = "Please select a date.");
+  if (isNaN(bal) || bal <= 0) return (err.textContent = "Enter a valid balance.");
+  if (entries.find(e => e.date === date)) return (err.textContent = "Entry for this date already exists.");
+
+  entries.push({ date, balance: bal });
+  save();
+  document.getElementById("inp-bal").value = "";
+  render();
+  toast("Entry logged ✓");
+}
+
+// ── Delete Entry ───────────────────────────────────────────
+function deleteEntry(date) {
+  if (date === LOCK_DATE) return;
+  entries = entries.filter(e => e.date !== date);
+  save();
+  render();
+  toast("Entry removed");
+}
+
+// ── Toast ──────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 2000);
+}
+
+// ── Init ───────────────────────────────────────────────────
+document.getElementById("inp-date").value = new Date().toISOString().split("T")[0];
+document.getElementById("inp-bal").addEventListener("keydown", e => {
+  if (e.key === "Enter") addEntry();
+});
+
+load();
+render();
+
+// ── PWA Service Worker (inline blob) ──────────────────────
+if ("serviceWorker" in navigator) {
+  const sw = `
+    const CACHE = "cadenvault-v1";
+    const FILES = ["/"];
+    self.addEventListener("install", e =>
+      e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)))
+    );
+    self.addEventListener("fetch", e =>
+      e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)))
+    );
+  `;
+  const blob = new Blob([sw], { type: "application/javascript" });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+}
+</script>
+
+</body>
+</html>
