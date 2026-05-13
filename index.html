@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<meta name="apple-mobile-web-app-title" content="Caden's Vault"/>
+<meta name="theme-color" content="#0f0d0b"/>
+<title>Caden's Vault</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Serif+Display&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0d0b; --surf:#181411; --raise:#201c18;
+  --bdr:#2e2820; --bdr2:#3d342a;
+  --text:#e8e0d5; --muted:#8a7c6e; --dim:#4a3f35;
+  --green:#7a9e7e; --red:#b85c4a; --amber:#c9a25a;
+  --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Mono','Courier New',monospace;min-height:100dvh;color-scheme:dark;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+#app{max-width:480px;margin:0 auto;padding:calc(20px + var(--st)) 18px calc(72px + var(--sb))}
+
+/* Tabbar */
+#tabbar{position:fixed;bottom:0;left:0;right:0;background:var(–bg);border-top:1px solid var(–bdr2);display:flex;padding-bottom:var(–sb);z-index:100;box-shadow:0 -8px 24px rgba(0,0,0,0.6)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0;gap:4px;border:none;background:none;color:var(–dim);font-family:‘DM Mono’,monospace;font-size:8px;letter-spacing:1px;cursor:pointer;transition:color .2s}
+.tab.active{color:var(–amber)}
+.tab svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* Typography */
+.pg-title{font-family:‘DM Serif Display’,serif;font-size:26px;font-weight:400;color:var(–text);letter-spacing:-0.3px;line-height:1.1}
+.pg-sub{font-size:10px;color:var(–dim);letter-spacing:1.5px;margin-top:4px}
+.pg-head{margin-bottom:24px}
+.sec-label{font-size:8px;color:var(–dim);letter-spacing:2px;padding:18px 0 8px}
+
+/* Cards */
+.card{background:var(–surf);border:1px solid var(–bdr);border-radius:6px;padding:14px}
+.row{display:flex;gap:8px;margin-bottom:8px}
+.row>.card{flex:1;min-width:0}
+
+/* KPI */
+.kl{font-size:8px;color:var(–dim);letter-spacing:1.5px;margin-bottom:8px}
+.kv{font-size:24px;font-weight:400;letter-spacing:-0.5px;line-height:1;color:var(–text)}
+.kv.sm{font-size:17px}
+.kv.g{color:var(–green)}.kv.r{color:var(–red)}.kv.a{color:var(–amber)}
+.ks{font-size:10px;color:var(–muted);margin-top:5px}
+
+/* Chart */
+.chart-wrap{position:relative;height:160px;margin-top:4px}
+canvas{background:transparent!important}
+
+/* Pills */
+.pills{display:flex;gap:6px;margin-bottom:20px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.pills::-webkit-scrollbar{display:none}
+.pill{flex-shrink:0;padding:6px 16px;border-radius:3px;font-size:10px;font-family:‘DM Mono’,monospace;cursor:pointer;letter-spacing:0.8px;border:1px solid var(–bdr2);background:var(–surf);color:var(–muted);transition:all .15s}
+.pill.active{background:var(–raise);border-color:var(–amber);color:var(–amber)}
+
+/* Period cards */
+.pcard{background:var(–surf);border:1px solid var(–bdr);border-radius:6px;padding:16px;margin-bottom:10px}
+.ptop{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.pdate{font-size:13px;color:var(–text);font-weight:500}
+.ppnl{font-size:22px;letter-spacing:-0.5px;text-align:right}
+.proi{font-size:11px;margin-top:2px;text-align:right}
+.sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.sitem{background:var(–raise);border-radius:4px;padding:10px}
+.slbl{font-size:8px;color:var(–dim);letter-spacing:1px;margin-bottom:5px}
+.sval{font-size:12px;color:var(–text)}
+.mini-wrap{position:relative;height:70px;margin-top:4px}
+
+/* Breakdown */
+.brow{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(–bdr)}
+.brow:last-child{border-bottom:none}
+.bl{font-size:12px;color:var(–muted)}
+.bm{font-size:10px;color:var(–dim);margin-top:2px}
+.br-val{font-size:13px;font-weight:500;text-align:right}
+.br-pct{font-size:10px;margin-top:2px;text-align:right}
+
+/* Form */
+.fgrid{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.ff{flex:1 1 110px}
+.fl{font-size:9px;color:var(–muted);letter-spacing:0.8px;margin-bottom:6px}
+input[type=“date”],input[type=“number”],textarea{width:100%;background:var(–raise);border:1px solid var(–bdr2);border-radius:4px;color:var(–text);padding:10px 12px;font-family:‘DM Mono’,monospace;font-size:13px;outline:none;-webkit-appearance:none;color-scheme:dark;transition:border-color .15s}
+input:focus,textarea:focus{border-color:var(–amber)}
+textarea{resize:none;height:110px}
+.btn{background:var(–raise);border:1px solid var(–bdr2);border-radius:4px;color:var(–text);padding:10px 16px;font-family:‘DM Mono’,monospace;font-size:11px;letter-spacing:0.8px;cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s;-webkit-appearance:none}
+.btn:active{opacity:.7}
+.btn.acc{border-color:var(–amber);color:var(–amber)}
+.btn.dng{border-color:var(–red);color:var(–red)}
+.btn.full{width:100%}
+.err{color:var(–red);font-size:10px;margin-top:8px;min-height:14px;letter-spacing:0.3px}
+
+/* Table */
+.twrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:11px}
+thead tr{border-bottom:1px solid var(–bdr)}
+th{padding:8px 12px;text-align:left;color:var(–dim);font-size:8px;letter-spacing:1.5px;font-weight:400;white-space:nowrap}
+td{padding:11px 12px;white-space:nowrap;color:var(–muted)}
+td.bold{color:var(–text);font-weight:500}
+tbody tr{border-bottom:1px solid var(–bdr)}
+tbody tr:last-child{border-bottom:none}
+.delbtn{background:none;border:none;color:var(–dim)!important;font-size:16px;cursor:pointer;padding:4px 6px;line-height:1;-webkit-appearance:none;appearance:none;-webkit-tap-highlight-color:transparent}
+.delbtn:active{color:var(–red)}
+.tag{display:inline-block;font-size:8px;letter-spacing:0.5px;padding:1px 5px;border-radius:2px;margin-left:5px;vertical-align:middle}
+.ts{background:var(–bdr);color:var(–dim)}
+.tw{background:#2d1f0e;color:var(–amber)}
+
+/* Goals */
+.ginpgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0}
+.ginp{background:var(–raise);border-radius:4px;padding:10px}
+
+/* Modal */
+#imodal{display:none;position:fixed;inset:0;background:#000000bb;z-index:200;align-items:center;justify-content:center;padding:24px}
+.mbox{background:var(–surf);border:1px solid var(–bdr2);border-radius:8px;padding:22px;width:100%;max-width:420px}
+.mtitle{font-size:13px;color:var(–text);margin-bottom:6px}
+.msub{font-size:11px;color:var(–muted);margin-bottom:14px;line-height:1.6}
+.mactions{display:flex;gap:8px;margin-top:12px}
+
+/* Toast */
+#toast{position:fixed;bottom:calc(64px + var(–sb));left:50%;transform:translateX(-50%) translateY(12px);background:var(–raise);border:1px solid var(–bdr2);border-radius:4px;padding:9px 16px;font-size:11px;color:var(–text);letter-spacing:0.3px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:999;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.hidden{display:none}
+.footer{text-align:center;color:var(–dim);font-size:9px;margin-top:28px;letter-spacing:1px}
+</style>
+
+</head>
+<body>
+<div id="app">
+
+  <!-- DASHBOARD -->
+
+  <div id="tab-dashboard">
+    <div class="pg-head">
+      <div class="pg-title">Caden's Vault</div>
+      <div class="pg-sub">ES · NQ</div>
+    </div>
+    <div class="row">
+      <div class="card"><div class="kl">REAL BALANCE</div><div class="kv" id="k-bal">—</div></div>
+      <div class="card"><div class="kl">PERFORMANCE BAL.</div><div class="kv" id="k-bal-adj">—</div><div class="ks">withdrawals added back</div></div>
+    </div>
+    <div class="row">
+      <div class="card"><div class="kl">NET P&amp;L</div><div class="kv sm" id="k-pnl">—</div></div>
+      <div class="card"><div class="kl">TOTAL ROI</div><div class="kv sm" id="k-roi">—</div></div>
+    </div>
+    <div class="row">
+      <div class="card"><div class="kl">AVG DAILY P&amp;L</div><div class="kv sm" id="k-avg">—</div></div>
+      <div class="card"><div class="kl">DAYS ACTIVE</div><div class="kv sm" id="k-days">—</div></div>
+    </div>
+    <div class="row">
+      <div class="card"><div class="kl">MAX DRAWDOWN</div><div class="kv sm" id="k-dd">—</div></div>
+      <div class="card"><div class="kl">WIN RATE</div><div class="kv sm" id="k-wr">—</div></div>
+    </div>
+    <div class="row">
+      <div class="card"><div class="kl">BEST SESSION</div><div class="kv sm g" id="k-best">—</div><div class="ks" id="k-best-d"></div></div>
+      <div class="card"><div class="kl">WORST SESSION</div><div class="kv sm r" id="k-worst">—</div><div class="ks" id="k-worst-d"></div></div>
+    </div>
+    <div class="row">
+      <div class="card"><div class="kl">TOTAL WITHDRAWN</div><div class="kv sm a" id="k-withdrawn">—</div></div>
+    </div>
+    <div class="sec-label">EQUITY CURVE</div>
+    <div class="card"><div class="chart-wrap"><canvas id="chart-main"></canvas></div></div>
+    <div class="footer">BASE $5,000 · DATA SAVED LOCALLY</div>
+  </div>
+
+  <!-- ANALYTICS -->
+
+  <div id="tab-analytics" class="hidden">
+    <div class="pg-head">
+      <div class="pg-title">Analytics</div>
+      <div class="pg-sub">PERFORMANCE BREAKDOWN</div>
+    </div>
+    <div class="pills" id="period-pills">
+      <button class="pill active" onclick="setPeriod('week')">WEEKLY</button>
+      <button class="pill" onclick="setPeriod('month')">MONTHLY</button>
+      <button class="pill" onclick="setPeriod('quarter')">QUARTERLY</button>
+      <button class="pill" onclick="setPeriod('year')">YEARLY</button>
+      <button class="pill" onclick="setPeriod('alltime')">ALL TIME</button>
+    </div>
+    <div id="analytics-content"></div>
+  </div>
+
+  <!-- LOG -->
+
+  <div id="tab-log" class="hidden">
+    <div class="pg-head">
+      <div class="pg-title">Log</div>
+      <div class="pg-sub">RECORD SESSION</div>
+    </div>
+    <div class="card">
+      <div class="fgrid">
+        <div class="ff"><div class="fl">DATE</div><input type="date" id="inp-date"/></div>
+        <div class="ff"><div class="fl">BALANCE (USD)</div><input type="number" id="inp-bal" placeholder="6250.00" step="0.01"/></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn acc full" onclick="addEntry()">+ TRADE</button>
+        <button class="btn dng full" onclick="addWithdrawal()">− WITHDRAW</button>
+      </div>
+      <div class="err" id="err"></div>
+    </div>
+    <div class="sec-label">BACKUP</div>
+    <div class="card">
+      <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:14px">Export your entries as a file. Import to restore after clearing data or switching devices.</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn full" onclick="exportData()">EXPORT</button>
+        <button class="btn full" onclick="document.getElementById('imodal').style.display='flex'">IMPORT</button>
+      </div>
+      <div style="font-size:9px;color:var(--dim);margin-top:10px;text-align:center;letter-spacing:0.5px" id="backup-info"></div>
+    </div>
+    <div class="sec-label">HISTORY</div>
+    <div class="card" style="padding:0">
+      <div class="twrap">
+        <table>
+          <thead><tr>
+            <th style="padding-left:14px">DATE</th>
+            <th>BALANCE</th><th>DAILY P&amp;L</th><th>DAILY %</th><th></th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="footer">BASE $5,000 · DATA SAVED LOCALLY</div>
+  </div>
+
+  <!-- GOALS -->
+
+  <div id="tab-goals" class="hidden">
+    <div class="pg-head">
+      <div class="pg-title">Goals</div>
+      <div class="pg-sub">TWO-PHASE MODEL</div>
+    </div>
+
+```
+<div class="card">
+  <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:14px">Phase 1: compound while withdrawing 30% of monthly profit. Phase 2: once you hit your ceiling, flip to 100% withdrawal and live off the monthly profit forever.</div>
+  <div class="ginpgrid">
+    <div class="ginp">
+      <div class="slbl">MONTHLY GROWTH %</div>
+      <input type="number" id="g-growth" value="10" step="0.5" oninput="renderGoals()" style="margin-top:6px;padding:6px 8px;font-size:15px"/>
+    </div>
+    <div class="ginp">
+      <div class="slbl">PHASE 1 WITHDRAWAL %</div>
+      <input type="number" id="g-p1withdraw" value="30" step="1" min="0" max="100" oninput="renderGoals()" style="margin-top:6px;padding:6px 8px;font-size:15px"/>
+      <div style="font-size:9px;color:var(--dim);margin-top:4px">% of profit taken in phase 1</div>
+    </div>
+    <div class="ginp">
+      <div class="slbl">CEILING TARGET ($)</div>
+      <input type="number" id="g-acctarget" value="75000" step="1000" oninput="renderGoals()" style="margin-top:6px;padding:6px 8px;font-size:15px"/>
+    </div>
+    <div class="ginp">
+      <div class="slbl">MONTHLY DEPOSIT ($)</div>
+      <input type="number" id="g-deposit" value="0" step="100" oninput="renderGoals()" style="margin-top:6px;padding:6px 8px;font-size:15px"/>
+      <div style="font-size:9px;color:var(--dim);margin-top:4px">optional fresh capital</div>
+    </div>
+  </div>
+</div>
+
+<div id="goals-output"></div>
+<div class="footer">PROJECTIONS ARE ESTIMATES · PAST PERFORMANCE ≠ FUTURE RESULTS</div>
+```
+
+  </div>
+
+</div>
+
+<!-- Import Modal -->
+
+<div id="imodal" style="display:none;position:fixed;inset:0;background:#000000bb;z-index:200;align-items:center;justify-content:center;padding:24px">
+  <div class="mbox">
+    <div class="mtitle">Import Backup</div>
+    <div class="msub">Paste the contents of your exported backup file. This will replace all current entries.</div>
+    <textarea id="import-text" placeholder="Paste backup JSON here..."></textarea>
+    <div class="err" id="import-err"></div>
+    <div class="mactions">
+      <button class="btn full" onclick="document.getElementById('imodal').style.display='none';document.getElementById('import-text').value='';document.getElementById('import-err').textContent=''">CANCEL</button>
+      <button class="btn acc full" onclick="importData()">RESTORE</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tab Bar -->
+
+<div id="tabbar">
+  <button class="tab active" onclick="setTab('dashboard')" id="tb-dashboard">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    OVERVIEW
+  </button>
+  <button class="tab" onclick="setTab('analytics')" id="tb-analytics">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    ANALYTICS
+  </button>
+  <button class="tab" onclick="setTab('log')" id="tb-log">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    LOG
+  </button>
+  <button class="tab" onclick="setTab('goals')" id="tb-goals">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+    GOALS
+  </button>
+</div>
+<div id="toast"></div>
+
+<script>
+const BASE=5000, LOCK="2026-04-15", KEY="cv_v4";
+const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const SEED=[
+  {date:"2026-04-15",displayDate:"2026-04-15",balance:5000,type:"trade"},
+  {date:"2026-04-16",displayDate:"2026-04-16",balance:4936.10,type:"trade"},
+  {date:"2026-04-17",displayDate:"2026-04-17",balance:4792.00,type:"trade"},
+  {date:"2026-04-20",displayDate:"2026-04-20",balance:4676.20,type:"trade"},
+  {date:"2026-04-21",displayDate:"2026-04-21",balance:4813.70,type:"trade"},
+  {date:"2026-04-22",displayDate:"2026-04-22",balance:4729.90,type:"trade"},
+  {date:"2026-04-23",displayDate:"2026-04-23",balance:4708.50,type:"trade"},
+  {date:"2026-04-24",displayDate:"2026-04-24",balance:4820.90,type:"trade"},
+  {date:"2026-04-27",displayDate:"2026-04-27",balance:4982.00,type:"trade"},
+  {date:"2026-04-28",displayDate:"2026-04-28",balance:4751.80,type:"trade"},
+  {date:"2026-04-29",displayDate:"2026-04-29",balance:5195.95,type:"trade"},
+  {date:"2026-04-30",displayDate:"2026-04-30",balance:4898.80,type:"trade"},
+  {date:"2026-05-01",displayDate:"2026-05-01",balance:4731.90,type:"trade"},
+  {date:"2026-05-04",displayDate:"2026-05-04",balance:4254.10,type:"trade"},
+  {date:"2026-05-05",displayDate:"2026-05-05",balance:4645.00,type:"trade"},
+  {date:"2026-05-06",displayDate:"2026-05-06",balance:5581.15,type:"trade"},
+  {date:"2026-05-07",displayDate:"2026-05-07",balance:5953.35,type:"trade"},
+  {date:"2026-05-08",displayDate:"2026-05-08",balance:5700.00,type:"trade"},
+  {date:"2026-05-11",displayDate:"2026-05-11",balance:5763.95,type:"trade"},
+  {date:"2026-05-12",displayDate:"2026-05-12",balance:6010.75,type:"trade"}
+];
+
+let entries=[], chartMain=null, currentPeriod="week";
+
+function fmt(n,d=2){return n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d})}
+function fd(s){const clean=s.replace(/_w$/,"").replace(/_t\d+$/,"");const[,m,d]=clean.split("-");return MO[parseInt(m)-1]+" "+parseInt(d)}
+function cleanDate(s){return s.replace(/_w$/,"").replace(/_t\d+$/,"")}
+function days(a,b){return Math.round((new Date(cleanDate(b)+"T00:00:00")-new Date(cleanDate(a)+"T00:00:00"))/86400000)}
+function sign(n){return n>=0?"+":""}
+function gcol(n){return n>=0?"var(--green)":"var(--red)"}
+function gcls(n){return n>=0?"g":"r"}
+
+function el(id){return document.getElementById(id)}
+
+function load(){
+  try{const r=localStorage.getItem(KEY);entries=r?JSON.parse(r):[...SEED];if(!r)save();}
+  catch(e){entries=[...SEED];}
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(entries));}catch(e){}}
+function sorted(){return[...entries].sort((a,b)=>a.date.localeCompare(b.date))}
+
+function sortedAdjusted(){
+  const rows=sorted();
+  let cumW=0;
+  return rows.map((r,i)=>{
+    if(r.type==="withdrawal"){
+      const prevTrades=rows.slice(0,i).filter(x=>x.type==="trade");
+      const pb=prevTrades.length>0?prevTrades[prevTrades.length-1].balance:BASE;
+      cumW+=pb-r.balance;
+    }
+    return{...r,adjBal:r.balance+cumW,cumW};
+  });
+}
+
+function getTotalWithdrawn(){
+  const rows=sorted();
+  let cumW=0;
+  rows.forEach((r,i)=>{
+    if(r.type==="withdrawal"){
+      const prevTrades=rows.slice(0,i).filter(x=>x.type==="trade");
+      const pb=prevTrades.length>0?prevTrades[prevTrades.length-1].balance:BASE;
+      cumW+=pb-r.balance;
+    }
+  });
+  return cumW;
+}
+
+function calcMetrics(rows, startBal){
+  if(rows.length<2)return null;
+  const sb=startBal!==undefined?startBal:rows[0].balance;
+  const first=rows[0], last=rows[rows.length-1];
+  const safeSb=sb&&sb!==0?sb:BASE;
+  const net=last.balance-safeSb, roi=(net/safeSb)*100;
+  const d=Math.max(1,days(first.date,last.date));
+  const avg=net/d;
+  let peak=sb, dd=0;
+  for(const r of rows){if(r.balance>peak)peak=r.balance;const x=((peak-r.balance)/peak)*100;if(x>dd)dd=x;}
+  let best=null,worst=null,w=0,lo=0;
+  for(let i=1;i<rows.length;i++){
+    const ch=rows[i].balance-rows[i-1].balance;
+    if(!best||ch>best.c)best={d:rows[i].date,c:ch};
+    if(!worst||ch<worst.c)worst={d:rows[i].date,c:ch};
+    if(ch>0)w++;else if(ch<0)lo++;
+  }
+  const wr=w+lo>0?((w/(w+lo))*100):null;
+  return{net,roi,d,avg,dd,best,worst,w,lo,wr,last,sb:safeSb};
+}
+
+function getWeekKey(date){
+  const s=cleanDate(date);
+  const[y,m,d]=s.split("-").map(Number);
+  const dt=new Date(y,m-1,d);
+  const day=dt.getDay();
+  const diff=day===0?6:day-1;
+  const mon=new Date(y,m-1,d-diff);
+  return mon.getFullYear()+"-"+String(mon.getMonth()+1).padStart(2,"0")+"-"+String(mon.getDate()).padStart(2,"0");
+}
+function getMonthKey(date){return cleanDate(date).slice(0,7)}
+function getQuarterKey(date){const[y,m]=cleanDate(date).split("-");return y+"-Q"+Math.ceil(parseInt(m)/3)}
+function getYearKey(date){return cleanDate(date).slice(0,4)}
+
+function weekLabel(key){
+  const[ky,km,kd]=key.split("-").map(Number);
+  const d=new Date(ky,km-1,kd);
+  const end=new Date(ky,km-1,kd+4);
+  return MO[d.getMonth()]+" "+d.getDate()+" – "+MO[end.getMonth()]+" "+end.getDate();
+}
+function monthLabel(key){const[y,m]=key.split("-");return MO[parseInt(m)-1]+" "+y}
+function groupLabel(key,type){
+  if(type==="week")return weekLabel(key);
+  if(type==="month")return monthLabel(key);
+  if(type==="quarter"){const[y,q]=key.split("-");return q+" "+y;}
+  if(type==="year")return key;
+  return "All Time";
+}
+
+// ── Tab nav ──
+function setTab(name){
+  ["dashboard","analytics","log","goals"].forEach(t=>{
+    el("tab-"+t).classList.toggle("hidden",t!==name);
+    el("tb-"+t).classList.toggle("active",t===name);
+  });
+  if(name==="analytics")renderAnalytics();
+  if(name==="goals")renderGoals();
+}
+
+// ── Dashboard ──
+function renderDashboard(){
+  const adj=sortedAdjusted();
+  const adjForMetrics=adj.map(r=>({...r,balance:r.adjBal}));
+  const m=calcMetrics(adjForMetrics,BASE);
+  const rows=sorted();
+  const realBal=rows.length>0?rows[rows.length-1].balance:BASE;
+  const tw=getTotalWithdrawn();
+
+  el("k-bal").textContent="$"+fmt(realBal);
+  el("k-bal-adj").textContent=m?"$"+fmt(m.last.balance):"—";
+  el("k-withdrawn").textContent=tw>0?"$"+fmt(tw):"—";
+
+  if(!m)return;
+  try{
+  const p=el("k-pnl");p.textContent=sign(m.net)+"$"+fmt(Math.abs(m.net));p.className="kv sm "+gcls(m.net);
+  const r=el("k-roi");r.textContent=sign(m.roi)+fmt(m.roi)+"%";r.className="kv sm "+gcls(m.roi);
+  const a=el("k-avg");a.textContent=sign(m.avg)+"$"+fmt(Math.abs(m.avg));a.className="kv sm "+gcls(m.avg);
+  el("k-days").textContent=m.d+"d";
+  const dd=el("k-dd");dd.textContent="-"+fmt(m.dd)+"%";dd.className="kv sm"+(m.dd>5?" r":"");
+  el("k-wr").textContent=m.wr!==null?fmt(m.wr,0)+"%":"—";
+  if(m.best){el("k-best").textContent="+$"+fmt(m.best.c);el("k-best-d").textContent=fd(m.best.d);}
+  if(m.worst){el("k-worst").textContent=sign(m.worst.c)+"$"+fmt(Math.abs(m.worst.c));el("k-worst-d").textContent=fd(m.worst.d);}
+  }catch(e){console.warn('Dashboard error:',e);}
+  renderMainChart(adj);
+}
+
+function renderMainChart(adj){
+  try{
+  const labels=adj.map(r=>fd(r.date));
+  const data=adj.map(r=>r.adjBal);
+  const last=data[data.length-1]||BASE;
+  const col=last>=BASE?"#7a9e7e":"#b85c4a";
+  if(chartMain){chartMain.destroy();chartMain=null;}
+  const ctx=el("chart-main").getContext("2d");
+  const g=ctx.createLinearGradient(0,0,0,160);
+  g.addColorStop(0,col+"55");g.addColorStop(1,col+"00");
+  chartMain=new Chart(ctx,{
+    type:"line",
+    data:{labels,datasets:[{data,borderColor:col,borderWidth:2,backgroundColor:g,fill:true,tension:0.3,pointBackgroundColor:col,pointRadius:3,pointHoverRadius:5}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:"#201c18",borderColor:"#3d342a",borderWidth:1,titleColor:"#8a7c6e",bodyColor:"#e8e0d5",titleFont:{family:"monospace",size:10},bodyFont:{family:"monospace",size:11},callbacks:{label:c=>"$"+fmt(c.raw)+" ("+sign(c.raw-BASE)+"$"+fmt(Math.abs(c.raw-BASE))+")"}}},
+      scales:{
+        x:{ticks:{color:"#4a3f35",font:{family:"monospace",size:9},maxRotation:45},grid:{display:false},border:{display:false}},
+        y:{ticks:{color:"#4a3f35",font:{family:"monospace",size:9},callback:v=>"$"+(v/1000).toFixed(1)+"k"},grid:{color:"#201c18"},border:{display:false}}
+      },
+      animation:{duration:400}
+    },
+    plugins:[{id:"bl",afterDraw(ch){
+      const{ctx:cx,scales:{y,x}}=ch;
+      const yp=y.getPixelForValue(BASE);
+      cx.save();cx.setLineDash([4,4]);cx.strokeStyle="#2e2820";cx.lineWidth=1;
+      cx.beginPath();cx.moveTo(x.left,yp);cx.lineTo(x.right,yp);cx.stroke();cx.restore();
+    }}]
+  });
+  }catch(e){console.warn('Chart error:',e);}
+}
+
+// ── Analytics ──
+function setPeriod(p){
+  currentPeriod=p;
+  document.querySelectorAll(".pill").forEach(b=>{
+    const map={week:"WEEKLY",month:"MONTHLY",quarter:"QUARTERLY",year:"YEARLY",alltime:"ALL TIME"};
+    b.classList.toggle("active",b.textContent===map[p]);
+  });
+  renderAnalytics();
+}
+
+function renderAnalytics(){
+  const adj=sortedAdjusted().filter(r=>r.date!==LOCK);
+  const adjRows=adj.map(r=>({...r,balance:r.adjBal}));
+  const container=el("analytics-content");
+  container.innerHTML="";
+  if(adjRows.length===0){container.innerHTML='<div style="color:var(--dim);font-size:12px;text-align:center;padding:40px">No data yet</div>';return;}
+
+  if(currentPeriod==="alltime"){
+    const allRows=[{date:LOCK,balance:BASE,type:"trade"},...adjRows];
+    const m=calcMetrics(allRows,BASE);
+    if(!m)return;
+    const first=allRows[0],last=allRows[allRows.length-1];
+    container.innerHTML=buildPCard("All Time",fd(first.date)+" – "+fd(last.date),m,allRows,true);
+    return;
+  }
+
+  const keyFn={week:getWeekKey,month:getMonthKey,quarter:getQuarterKey,year:getYearKey}[currentPeriod];
+  const allWithBase=[{date:LOCK,balance:BASE,type:"trade"},...adjRows];
+  const groups={};
+  allWithBase.forEach(r=>{const k=keyFn(r.date);if(!groups[k])groups[k]=[];groups[k].push(r);});
+  const keys=Object.keys(groups).sort().reverse();
+  let html="";
+  keys.forEach((key,ki)=>{
+    const grp=[...groups[key]].sort((a,b)=>a.date.localeCompare(b.date));
+    const prevKey=keys[ki+1];
+    let sb;
+    if(prevKey){
+      const pr=[...groups[prevKey]].sort((a,b)=>a.date.localeCompare(b.date));
+      sb=pr[pr.length-1].balance;
+    } else {
+      // Oldest period: use the first entry of this group as start balance
+      const grpSorted=[...grp].sort((a,b)=>a.date.localeCompare(b.date));
+      sb=grpSorted[0].balance;
+    }
+    const m=calcMetrics(grp,sb);
+    if(!m||grp.length<2)return;
+    const actualRange=fd(grp[0].date)+" – "+fd(grp[grp.length-1].date);
+    const periodTitle=currentPeriod==="week"?actualRange:groupLabel(key,currentPeriod);
+    html+=buildPCard(periodTitle,actualRange,m,grp,false);
+  });
+  container.innerHTML=html||'<div style="color:var(--dim);font-size:12px;text-align:center;padding:40px">Not enough data</div>';
+  // render mini charts after DOM is ready
+  setTimeout(renderMiniCharts, 80);
+}
+
+function buildPCard(title,dateRange,m,rows,big){
+  const col=m.net>=0?"var(--green)":"var(--red)";
+  const cid="mc"+Math.random().toString(36).slice(2);
+  const enc=encodeURIComponent(JSON.stringify(rows.map(r=>r.balance)));
+  return`<div class="pcard">
+    <div class="ptop">
+      <div>
+        <div class="pdate">${title}</div>
+        ${title!==dateRange?`<div style="font-size:10px;color:var(--dim);margin-top:3px">${dateRange}</div>`:""}
+      </div>
+      <div>
+        <div class="ppnl" style="color:${col}">${sign(m.net)}$${fmt(Math.abs(m.net))}</div>
+        <div class="proi" style="color:${col}">${sign(m.roi)}${fmt(m.roi)}%</div>
+      </div>
+    </div>
+    <div class="sgrid">
+      <div class="sitem"><div class="slbl">WIN RATE</div><div class="sval">${m.wr!==null?fmt(m.wr,0)+"%":"—"}</div></div>
+      <div class="sitem"><div class="slbl">TRADE DAYS</div><div class="sval">${rows.filter(r=>r.type!=='withdrawal'&&r.date!==LOCK).length}</div></div>
+      <div class="sitem"><div class="slbl">AVG DAILY</div><div class="sval" style="color:${gcol(m.avg)}">${sign(m.avg)}$${fmt(Math.abs(m.avg))}</div></div>
+      <div class="sitem"><div class="slbl">MAX DD</div><div class="sval" style="color:${m.dd>5?"var(--red)":"var(--text)"}">-${fmt(m.dd)}%</div></div>
+      <div class="sitem"><div class="slbl">BEST DAY</div><div class="sval" style="color:var(--green)">${m.best?"+$"+fmt(m.best.c):"—"}</div></div>
+      <div class="sitem"><div class="slbl">WORST DAY</div><div class="sval" style="color:var(--red)">${m.worst?sign(m.worst.c)+"$"+fmt(Math.abs(m.worst.c)):"—"}</div></div>
+    </div>
+    <div class="mini-wrap"><canvas data-minivals="${enc}"></canvas></div>
+  </div>`;
+}
+
+function renderMiniCharts(){
+  try{
+    document.querySelectorAll("canvas[data-minivals]:not([data-rendered])").forEach(cvs=>{
+      cvs.setAttribute("data-rendered","1");
+      const vals=JSON.parse(decodeURIComponent(cvs.getAttribute("data-minivals")));
+      if(!vals||vals.length<2)return;
+      const col=vals[vals.length-1]>=(vals[0]||BASE)?"#7a9e7e":"#b85c4a";
+      const ctx=cvs.getContext("2d");
+      const g=ctx.createLinearGradient(0,0,0,70);
+      g.addColorStop(0,col+"44");g.addColorStop(1,col+"00");
+      new Chart(ctx,{type:"line",data:{labels:vals.map((_,i)=>i),datasets:[{data:vals,borderColor:col,borderWidth:1.5,backgroundColor:g,fill:true,tension:0.4,pointRadius:0}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:{duration:0}}});
+    });
+  }catch(e){}
+}
+
+// ── Table ──
+function renderTable(){
+  const rows=sorted();
+  const tbody=el("tbody");tbody.innerHTML="";
+  rows.forEach((e,i)=>{
+    const prev=i>0?rows[i-1].balance:e.balance;
+    const daily=e.balance-prev;
+    const dailyPct=i===0?0:(prev!==0?(daily/prev)*100:0);
+    const isS=e.date===LOCK;
+    const isW=e.type==="withdrawal";
+    const dispDate=e.displayDate||cleanDate(e.date);
+    const noteLabel=e.note?'<span class="tag" style="background:var(--raise);color:var(--muted)">'+e.note+'</span>':'';
+    const tr=document.createElement("tr");
+    const dailyCol=i===0?"var(--dim)":isW?"var(--amber)":gcol(daily);
+    const pctCol=i===0||isW?"var(--dim)":gcol(dailyPct);
+    tr.innerHTML=`
+      <td style="padding-left:14px;color:var(--muted)">${fd(dispDate)}${isS?'<span class="tag ts">START</span>':""}${isW?'<span class="tag tw">WITHDRAW</span>':""}</td>
+      <td class="bold">$${fmt(e.balance)}</td>
+      <td style="color:${dailyCol}">${i===0?"—":isW?"−$"+fmt(Math.abs(daily)):sign(daily)+"$"+fmt(Math.abs(daily))}</td>
+      <td style="color:${pctCol}">${i===0||isW?"—":sign(dailyPct)+fmt(dailyPct)+"%"}</td>
+      <td style="text-align:center;padding-right:12px">${!isS?'<button class="delbtn" onclick="delEntry(\''+e.date+'\')">×</button>':""}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Add/Delete ──
+function addEntry(){
+  const date=el("inp-date").value,bal=parseFloat(el("inp-bal").value),err=el("err");
+  err.textContent="";
+  if(!date)return(err.textContent="Please select a date.");
+  if(isNaN(bal)||bal<=0)return(err.textContent="Enter a valid balance.");
+  if(entries.find(e=>e.date===date))return(err.textContent="Entry already exists for this date.");
+  entries.push({date,balance:bal,type:"trade"});
+  save();renderDashboard();renderTable();el("inp-bal").value="";
+  toast("Trade logged ✓");
+}
+
+function addWithdrawal(){
+  const date=el("inp-date").value,bal=parseFloat(el("inp-bal").value),err=el("err");
+  err.textContent="";
+  if(!date)return(err.textContent="Please select a date.");
+  if(isNaN(bal)||bal<=0)return(err.textContent="Enter the balance AFTER the withdrawal.");
+  const tradesBefore=entries.filter(e=>e.date<=date&&e.type==="trade").sort((a,b)=>a.date.localeCompare(b.date));
+  if(tradesBefore.length===0)return(err.textContent="Log a trade entry first.");
+  const prevBal=tradesBefore[tradesBefore.length-1].balance;
+  if(bal>=prevBal)return(err.textContent="Balance after withdrawal must be less than $"+fmt(prevBal)+".");
+  const wdate=date+"_w";
+  if(entries.find(e=>e.date===wdate))return(err.textContent="Withdrawal already logged for this date.");
+  const withdrawn=prevBal-bal;
+  entries.push({date:wdate,balance:bal,type:"withdrawal"});
+  save();renderDashboard();renderTable();el("inp-bal").value="";
+  toast("Withdrawal of $"+fmt(withdrawn)+" logged ✓");
+}
+
+function delEntry(date){
+  if(date===LOCK)return;
+  entries=entries.filter(e=>e.date!==date);
+  save();renderDashboard();renderTable();toast("Entry removed");
+}
+
+// ── Goals ──
+function renderGoals(){
+  var growth    = parseFloat(document.getElementById("g-growth").value)     || 10;
+  var p1w       = parseFloat(document.getElementById("g-p1withdraw").value); if(isNaN(p1w)) p1w = 30;
+  var ceiling   = parseFloat(document.getElementById("g-acctarget").value)  || 75000;
+  var deposit   = parseFloat(document.getElementById("g-deposit").value)    || 0;
+
+  var adj        = sortedAdjusted();
+  var currentBal = adj.length > 0 ? adj[adj.length-1].adjBal : BASE;
+  var rate       = growth / 100;
+  var p1wRate    = p1w / 100;
+
+  var months = [];
+  var bal = currentBal;
+  var ceilingMonth = null;
+  var totalIncome = 0;
+
+  for(var i = 1; i <= 120; i++){
+    var inPhase2 = bal >= ceiling;
+    var profit   = bal * rate;
+    var withdrawn, retained;
+
+    if(inPhase2){
+      // Phase 2: withdraw everything, principal stays fixed
+      bal       = ceiling;
+      profit    = ceiling * rate;
+      withdrawn = profit;
+      retained  = 0;
+    } else {
+      // Phase 1: withdraw p1w% of profit, compound the rest
+      withdrawn = profit * p1wRate;
+      retained  = profit - withdrawn;
+      bal       = bal + retained + deposit;
+      if(bal > ceiling) bal = ceiling;
+    }
+
+    totalIncome += withdrawn;
+    var d = new Date();
+    d.setMonth(d.getMonth() + i);
+    var label = MO[d.getMonth()] + " " + d.getFullYear();
+    months.push({i:i, label:label, bal:bal, profit:profit, withdrawn:withdrawn, inPhase2:inPhase2});
+    if(!ceilingMonth && bal >= ceiling) ceilingMonth = months[months.length-1];
+  }
+
+  var mets = calcMetrics(adj.map(function(r){ return Object.assign({},r,{balance:r.adjBal}); }), BASE);
+  var actualMonthly = mets ? Math.abs(mets.avg * 21) : 0;
+
+  // Current phase 1 income
+  var currentP1Income = currentBal * rate * p1wRate;
+
+  // Phase 2 income
+  var phase2Income = ceiling * rate;
+
+  function kcard(label, val, sub, cls){
+    return '<div class="card"><div class="kl">' + label + '</div>'
+      + '<div class="kv sm' + (cls?' '+cls:'') + '">' + val + '</div>'
+      + (sub ? '<div class="ks">' + sub + '</div>' : '')
+      + '</div>';
+  }
+
+  var html = '';
+
+  // Current state
+  html += '<div class="sec-label">RIGHT NOW</div>';
+  html += '<div class="row">';
+  html += kcard('CURRENT PERF. BALANCE', '$'+fmt(currentBal), '', '');
+  html += kcard('ACTUAL EST. MONTHLY PROFIT', '$'+fmt(actualMonthly), 'avg daily x 21 days', 'g');
+  html += '</div>';
+
+  // Phase 1 summary
+  html += '<div class="sec-label">PHASE 1 — COMPOUNDING WITH ' + p1w + '% WITHDRAWAL</div>';
+  html += '<div class="row">';
+  html += kcard('MONTHLY PROFIT NOW', '$'+fmt(currentBal*rate), 'at '+growth+'% growth', 'g');
+  html += kcard('MONTHLY INCOME NOW', '$'+fmt(currentP1Income), p1w+'% of profit taken out', 'a');
+  html += '</div>';
+  html += '<div class="row">';
+  html += kcard('REINVESTED ('+(100-p1w)+'%)', '$'+fmt(currentBal*rate*(1-p1wRate)), 'stays in account', '');
+  html += kcard('CEILING REACHED', ceilingMonth ? ceilingMonth.label : 'Beyond 10yr',
+    ceilingMonth ? ceilingMonth.i+' months · age ~'+(18+Math.floor(ceilingMonth.i/12)) : '', ceilingMonth?'g':'');
+  html += '</div>';
+
+  // Phase 2 summary
+  html += '<div class="sec-label">PHASE 2 — AT CEILING &middot; $'+fmt(ceiling,0)+'</div>';
+  html += '<div class="row">';
+  html += kcard('MONTHLY INCOME (USD)', '$'+fmt(phase2Income), '100% of '+growth+'% profit', 'g');
+  html += kcard('ANNUAL INCOME (USD)', '$'+fmt(phase2Income*12), 'principal untouched', 'g');
+  html += '</div>';
+
+  if(deposit > 0){
+    html += '<div class="card" style="margin-bottom:8px"><div class="kl">MONTHLY DEPOSIT</div>';
+    html += '<div class="kv sm g">+$'+fmt(deposit)+'/mo</div>';
+    html += '<div class="ks">fresh capital added — accelerates Phase 1</div></div>';
+  }
+
+  // Table
+  html += '<div class="sec-label">MONTH-BY-MONTH — 36 MONTHS</div>';
+  html += '<div class="card" style="padding:0"><div class="twrap"><table>';
+  html += '<thead><tr>'
+    + '<th style="padding-left:14px">MONTH</th>'
+    + '<th>BALANCE</th>'
+    + '<th>PROFIT</th>'
+    + '<th>INCOME</th>'
+    + '</tr></thead><tbody>';
+
+  months.slice(0,36).forEach(function(mo){
+    var isHit    = ceilingMonth && ceilingMonth.i === mo.i;
+    var rowBg    = (isHit || mo.inPhase2) ? 'background:var(--raise)' : '';
+    var balColor = mo.inPhase2 ? 'var(--amber)' : 'var(--text)';
+    var incColor = mo.inPhase2 ? 'var(--green)' : 'var(--amber)';
+    var tag      = isHit ? '<span class="tag" style="background:#2a2010;color:var(--amber)">CEILING</span>' : '';
+    var p2tag    = (!isHit && mo.inPhase2) ? '<span class="tag" style="background:#1a2515;color:var(--green)">P2</span>' : '';
+    html += '<tr style="'+rowBg+'">';
+    html += '<td style="padding-left:14px;color:var(--muted)">'+mo.label+tag+p2tag+'</td>';
+    html += '<td class="bold" style="color:'+balColor+'">$'+fmt(mo.bal)+'</td>';
+    html += '<td style="color:var(--green)">+$'+fmt(mo.profit)+'</td>';
+    html += '<td style="color:'+incColor+'">$'+fmt(mo.withdrawn)+'</td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div></div>';
+  document.getElementById("goals-output").innerHTML = html;
+}
+
+// ── Backup ──
+function exportData(){
+  const data=JSON.stringify(entries,null,2);
+  const date=new Date().toISOString().split("T")[0];
+  try{
+    const blob=new Blob([data],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="cadenvault-"+date+".json";
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);toast("Backup exported ✓");
+  }catch(e){
+    navigator.clipboard.writeText(data).then(()=>toast("Copied to clipboard ✓")).catch(()=>prompt("Copy this:",data));
+  }
+  const bi=el("backup-info");if(bi)bi.textContent="Last export: "+new Date().toLocaleString();
+}
+
+function importData(){
+  const text=el("import-text").value.trim();
+  const err=el("import-err");err.textContent="";
+  if(!text)return(err.textContent="Please paste your backup first.");
+  try{
+    const parsed=JSON.parse(text);
+    if(!Array.isArray(parsed))throw new Error();
+    if(!parsed.every(e=>e.date&&typeof e.balance==="number"))throw new Error();
+    entries=parsed;save();renderDashboard();renderTable();
+    document.getElementById("imodal").style.display="none";
+    el("import-text").value="";
+    toast("Restored "+parsed.length+" entries ✓");
+  }catch(e){
+    err.textContent="Invalid backup file. Paste the full exported JSON.";
+  }
+}
+
+function toast(msg){
+  const t=el("toast");t.textContent=msg;t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2200);
+}
+
+// ── Init ──
+el("inp-date").value=new Date().toISOString().split("T")[0];
+el("inp-bal").addEventListener("keydown",e=>{if(e.key==="Enter")addEntry();});
+load();
+renderDashboard();
+renderTable();
+</script>
+
+</body>
+</html>
